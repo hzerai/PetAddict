@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
-
+use Phpfastcache\CacheManager;
+use Phpfastcache\Config\ConfigurationOption;
 /**
  *@Route("/api/notification")
  */
@@ -20,12 +21,19 @@ class NotificationController extends AbstractController
     private $notificationRepo;
     private $serializer;
     private $em;
+    private $InstanceCache;
 
     public function __construct(NotificationRepository $notificationRepo, SerializerInterface $serializer, EntityManagerInterface $em)
     {
         $this->notificationRepo = $notificationRepo;
         $this->serializer = $serializer;
         $this->em = $em;
+        CacheManager::setDefaultConfig(new ConfigurationOption([
+            'path' => '/var/www/phpfastcache.com/dev/tmp', // or in windows "C:/tmp/"
+        ]));
+
+        // In your class, function, you can call the Cache
+        $this->InstanceCache = CacheManager::getInstance('files');
     }
 
 
@@ -55,6 +63,16 @@ class NotificationController extends AbstractController
         $notification->setFromUser($fromUser);
         $this->em->persist($notification);
         $this->em->flush();
+        $CachedString = $this->InstanceCache->getItem('NOTIF' . $this->clean($data['toUser']));
+        if (!$CachedString->isHit() || $CachedString->isNull()) {
+            $CachedString->set([$notification])->expiresAfter(3600);
+            $this->InstanceCache->save($CachedString);
+        } else {
+            $array = $CachedString->get();
+            array_push($array, $notification);
+            $CachedString->set($array);
+            $this->InstanceCache->save($CachedString);
+        }
         return new Response($this->serializer->serialize($notification, 'json'), Response::HTTP_OK);
     }
 
@@ -68,5 +86,28 @@ class NotificationController extends AbstractController
         $this->em->persist($notification);
         $this->em->flush();
         return new Response($this->serializer->serialize($notification, 'json'), Response::HTTP_OK);
+    }
+
+
+    /**
+     * @Route("/{key}/new", name="notifications_stream" , methods = "GET")
+     */
+    public function notificationsStream($key)
+    {
+
+        $CachedString = $this->InstanceCache->getItem('NOTIF' . $this->clean($key));
+        if (!$CachedString->isHit() || $CachedString->isNull()) {
+            return null;
+        } else {
+            $result = $this->serializer->serialize($CachedString->get(), 'json');
+            $CachedString->set(null);
+            $this->InstanceCache->save($CachedString);
+            return new Response($result, Response::HTTP_OK);
+        }
+    }
+
+    function clean($string)
+    {
+        return preg_replace('/[^A-Za-z0-9\-]/', '', json_encode($string)); // Removes special chars.
     }
 }

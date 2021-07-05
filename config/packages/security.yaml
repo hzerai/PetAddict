@@ -47,7 +47,9 @@ security:
         - { path: ^/api/token/refresh, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/api/users, roles: IS_AUTHENTICATED_ANONYMOUSLY,methods: [POST]}
         - { path: ^/api/users, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/api/inbox/, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/api/inbox, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/image, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/api/notification/, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/api/notification, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/adoption, roles: IS_AUTHENTICATED_FULLY,methods: [POST]}

@@ -182,6 +182,9 @@
     "phpdocumentor/type-resolver": {
         "version": "1.4.0"
     },
+    "phpfastcache/phpfastcache": {
+        "version": "8.0.5"
+    },
     "psr/cache": {
         "version": "1.0.1"
     },
@@ -190,6 +193,9 @@
     },
     "psr/log": {
         "version": "1.1.4"
+    },
+    "psr/simple-cache": {
+        "version": "1.0.1"
     },
     "symfony/asset": {
         "version": "v4.4.25"
