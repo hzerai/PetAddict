@@ -78,6 +78,15 @@ class Animal
      */
     private $updatedBy;
 
+    /**
+     * @ORM\OneToOne(targetEntity=Found::class, mappedBy="animal", cascade={"persist", "remove"})
+     */
+    private $found;
+    /**
+     * @ORM\OneToOne(targetEntity=Lost::class, mappedBy="animal", cascade={"persist", "remove"})
+     */
+    private $lost;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -207,7 +216,13 @@ class Animal
     public function prePersist()
     {
         $this->createdAt = new DateTime();
-        $this->createdBy = $this->getAdoption()->getUser()->getUserName();
+        if ($this->getAdoption()!== null){
+            $this->createdBy = $this->getAdoption()->getUser()->getUserName();
+        }
+        if ($this->getFound()!== null){
+
+        $this->createdBy = $this->getFound()->getUser()->getUserName();
+        }
     }
 
     /** @ORM\PreUpdate */
@@ -242,6 +257,51 @@ class Animal
     public function setNom(?string $nom): self
     {
         $this->nom = $nom;
+
+        return $this;
+    }
+
+    public function getFound(): ?Found
+    {
+        return $this->found;
+    }
+
+
+    public function setFound(?Found $found): self
+    {
+        // unset the owning side of the relation if necessary
+        if ($found === null && $this->found !== null) {
+            $this->found->setAnimal(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($found !== null && $found->getAnimal() !== $this) {
+            $found->setAnimal($this);
+        }
+
+        $this->found = $found;
+
+        return $this;
+    }
+    public function getLost(): ?Lost
+    {
+        return $this->lost;
+    }
+
+
+    public function setLost(?Lost $lost): self
+    {
+        // unset the owning side of the relation if necessary
+        if ($lost === null && $this->lost !== null) {
+            $this->lost->setAnimal(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($lost !== null && $lost->getAnimal() !== $this) {
+            $lost->setAnimal($this);
+        }
+
+        $this->lost = $lost;
 
         return $this;
     }
