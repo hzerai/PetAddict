@@ -8,6 +8,7 @@
 /public/bundles/
 /public/var/
 /var/
+/public/App/Cache
 /vendor/
 /migrations/
 ###< symfony/framework-bundle ###

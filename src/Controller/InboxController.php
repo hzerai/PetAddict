@@ -26,7 +26,7 @@ class InboxController extends AbstractController
     public function __construct(MessageRepository $messageRepo, SerializerInterface $serializer, EntityManagerInterface $em)
     {
         CacheManager::setDefaultConfig(new ConfigurationOption([
-            'path' => '/var/www/phpfastcache.com/dev/tmp', // or in windows "C:/tmp/"
+            'path' => 'App\Cache', 
         ]));
 
         // In your class, function, you can call the Cache
