@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass=FoundRepository::class)
  * @ORM\Entity(repositoryClass=AdoptionRepository::class) @ORM\HasLifecycleCallbacks
+
  */
 class Found
 {
@@ -57,6 +58,11 @@ class Found
      * @ORM\OneToOne(targetEntity=Animal::class, inversedBy="found", cascade={"persist", "remove"})
      */
     private $animal;
+
+    /**
+     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="founds")
+     */
+    private $user;
 
     
 
@@ -140,12 +146,14 @@ class Found
 public function prePersist()
 {
     $this->createdAt = new DateTime();
+    $this->createdBy = $this->user->getUserName();
 }
 
 /** @ORM\PreUpdate */
 public function preUpdate()
 {
     $this->updatedAt = new DateTime();
+    $this->updatedBy = $this->user->getUserName();
 }
 
 
@@ -172,6 +180,20 @@ public function setAnimal(?Animal $animal): self
 
     return $this;
 }
+
+public function getUser(): ?User
+{
+    return $this->user;
+}
+
+public function setUser(?User $user): self
+{
+    $this->user = $user;
+
+    return $this;
+}
+
+
 
     
 }
