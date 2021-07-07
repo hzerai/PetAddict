@@ -31,8 +31,6 @@ class NotificationController extends AbstractController
         CacheManager::setDefaultConfig(new ConfigurationOption([
             'path' => 'App\Cache', 
         ]));
-
-        // In your class, function, you can call the Cache
         $this->InstanceCache = CacheManager::getInstance('files');
     }
 

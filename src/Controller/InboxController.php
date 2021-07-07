@@ -26,10 +26,8 @@ class InboxController extends AbstractController
     public function __construct(MessageRepository $messageRepo, SerializerInterface $serializer, EntityManagerInterface $em)
     {
         CacheManager::setDefaultConfig(new ConfigurationOption([
-            'path' => 'App\Cache', 
+            'path' => 'App\Cache',
         ]));
-
-        // In your class, function, you can call the Cache
         $this->InstanceCache = CacheManager::getInstance('files');
         $this->messageRepo = $messageRepo;
         $this->serializer = $serializer;
@@ -68,15 +66,7 @@ class InboxController extends AbstractController
         $user_id = $this->getuser()->getEmail();
         $inbox = [];
         $allUserMessages = $this->messageRepo->findUserNewMessages($user_id);
-        foreach ($allUserMessages as $message) {
-            $theOtherUser = $message->getFromUser();
-            if ($inbox[$theOtherUser] == null) {
-                $inbox[$theOtherUser] = [$message];
-            } else {
-                array_push($inbox[$theOtherUser], $message);
-            }
-        }
-        return new Response($this->serializer->serialize($inbox, 'json'), Response::HTTP_OK);
+        return new Response($this->serializer->serialize($allUserMessages, 'json'), Response::HTTP_OK);
     }
     /**
      * @Route("", name="send_message" , methods = "POST")
