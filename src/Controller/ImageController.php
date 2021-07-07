@@ -79,12 +79,11 @@ class ImageController extends AbstractController
         $image->setBytes($data['bytes']);
         $image->setName($data['name']);
         if (isset($data['cover'])) {
-            $image->setCover(boolval($data['name']));
+            $image->setCover(boolval($data['cover']));
         }
         $image->setCreatedBy($user);
         $this->em->persist($image);
         $this->em->flush();
-        $image->setBytes(stream_get_contents($image->getBytes()));
         return new Response($this->serializer->serialize($image, 'json'), Response::HTTP_CREATED);
     }
 
