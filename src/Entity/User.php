@@ -123,24 +123,14 @@ class User implements UserInterface
      */
     private $sexe;
 
-    /**
-     * @ORM\OneToMany(targetEntity=Found::class, mappedBy="user")
-     */
-    private $founds;
-
-    /**
-     * @ORM\OneToMany(targetEntity=Lost::class, mappedBy="user")
-     */
-    private $losts;
-
+    
     
 
     public function __construct()
     {
         $this->adoptions = new ArrayCollection();
         $this->adoptionRequests = new ArrayCollection();
-        $this->founds = new ArrayCollection();
-        $this->losts = new ArrayCollection();
+        
     }
 
     public function getId(): ?int
@@ -477,65 +467,7 @@ class User implements UserInterface
         return $this;
     }
 
-    /**
-     * @return Collection|Found[]
-     */
-    public function getFounds(): Collection
-    {
-        return $this->founds;
-    }
-
-    public function addFound(Found $found): self
-    {
-        if (!$this->founds->contains($found)) {
-            $this->founds[] = $found;
-            $found->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeFound(Found $found): self
-    {
-        if ($this->founds->removeElement($found)) {
-            // set the owning side to null (unless already changed)
-            if ($found->getUser() === $this) {
-                $found->setUser(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection|Lost[]
-     */
-    public function getLosts(): Collection
-    {
-        return $this->losts;
-    }
-
-    public function addLost(Lost $lost): self
-    {
-        if (!$this->losts->contains($lost)) {
-            $this->losts[] = $lost;
-            $lost->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeLost(Lost $lost): self
-    {
-        if ($this->losts->removeElement($lost)) {
-            // set the owning side to null (unless already changed)
-            if ($lost->getUser() === $this) {
-                $lost->setUser(null);
-            }
-        }
-
-        return $this;
-    }
+    
 
     
 }

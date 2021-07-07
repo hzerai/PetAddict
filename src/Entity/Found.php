@@ -58,11 +58,6 @@ class Found
      */
     private $animal;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="founds")
-     */
-    private $user;
-
     
 
     public function getId(): ?int
@@ -145,14 +140,12 @@ class Found
 public function prePersist()
 {
     $this->createdAt = new DateTime();
-    $this->createdBy = $this->user->getUserName();
 }
 
 /** @ORM\PreUpdate */
 public function preUpdate()
 {
     $this->updatedAt = new DateTime();
-    $this->updatedBy = $this->user->getUserName();
 }
 
 
@@ -179,20 +172,6 @@ public function setAnimal(?Animal $animal): self
 
     return $this;
 }
-
-public function getUser(): ?User
-{
-    return $this->user;
-}
-
-public function setUser(?User $user): self
-{
-    $this->user = $user;
-
-    return $this;
-}
-
-
 
     
 }
