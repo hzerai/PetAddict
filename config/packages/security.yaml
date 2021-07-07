@@ -51,7 +51,6 @@ security:
         - { path: ^/api/image, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/api/notification, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/adoption, roles: IS_AUTHENTICATED_FULLY,methods: [POST]}
-        - { path: ^/api/found, roles: IS_AUTHENTICATED_FULLY,methods: [POST]}
-        - { path: ^/api/lost, roles: IS_AUTHENTICATED_FULLY,methods: [POST]}
+
 
 
