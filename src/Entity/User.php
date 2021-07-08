@@ -103,19 +103,18 @@ class User implements UserInterface
      */
     private $favoriteAnimal;
 
-    /**
-     * @ORM\OneToMany(targetEntity=Adoption::class, mappedBy="user")
-     */
     private $adoptions;
 
-    /**
-     * @ORM\OneToMany(targetEntity=AdoptionRequest::class, mappedBy="user", orphanRemoval=true)
-     */
     private $adoptionRequests;
 
+    private $recievedAdoptionRequests;
+
     /**
-     * @ORM\OneToOne(targetEntity=Address::class, cascade={"persist", "remove"})
+     * @ORM\Column(type="integer")
      */
+    private $addressId;
+
+
     private $address;
 
     /**
@@ -125,8 +124,6 @@ class User implements UserInterface
 
     public function __construct()
     {
-        $this->adoptions = new ArrayCollection();
-        $this->adoptionRequests = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -142,6 +139,18 @@ class User implements UserInterface
     public function setEmail(string $email): self
     {
         $this->email = $email;
+
+        return $this;
+    }
+
+    public function getAddressId(): ?int
+    {
+        return $this->addressId;
+    }
+
+    public function setAddressId(int $addressId): self
+    {
+        $this->addressId = $addressId;
 
         return $this;
     }
@@ -365,10 +374,26 @@ class User implements UserInterface
         // If you store any temporary, sensitive data on the user, clear it here
     }
 
-    /**
-     * @return Collection|Adoption[]
-     */
-    public function getAdoptions(): Collection
+
+    public function setAdoptions(ArrayCollection $adoptions)
+    {
+        $this->adoptions = $adoptions;
+        return $this;
+    }
+
+    public function setAdoptionRequests(ArrayCollection $adoptionRequests)
+    {
+        $this->adoptionRequests = $adoptionRequests;
+        return $this;
+    }
+
+    public function setRecievedAdoptionRequests(ArrayCollection $recievedAdoptionRequests)
+    {
+        $this->recievedAdoptionRequests = $recievedAdoptionRequests;
+        return $this;
+    }
+
+    public function getAdoptions(): ?Collection
     {
         return $this->adoptions;
     }
@@ -395,24 +420,7 @@ class User implements UserInterface
         return $this;
     }
 
-    /** @ORM\PrePersist */
-    public function prePersist()
-    {
-        $this->createdAt = new DateTime();
-        $this->createdBy = "admin";
-    }
-
-    /** @ORM\PreUpdate */
-    public function preUpdate()
-    {
-        $this->updatedAt = new DateTime();
-        $this->updatedBy = $this->email;
-    }
-
-    /**
-     * @return Collection|AdoptionRequest[]
-     */
-    public function getAdoptionRequests(): Collection
+    public function getAdoptionRequests(): ?Collection
     {
         return $this->adoptionRequests;
     }
@@ -424,6 +432,19 @@ class User implements UserInterface
             $adoptionRequest->setUser($this);
         }
 
+        return $this;
+    }
+
+    public function getRecievedAdoptionRequests(): ?Collection
+    {
+        return $this->recievedAdoptionRequests;
+    }
+
+    public function addRecievedAdoptionRequest(AdoptionRequest $adoptionRequest): self
+    {
+        if (!$this->recievedAdoptionRequests->contains($adoptionRequest)) {
+            $this->recievedAdoptionRequests[] = $adoptionRequest;
+        }
         return $this;
     }
 
@@ -461,5 +482,19 @@ class User implements UserInterface
         $this->sexe = $sexe;
 
         return $this;
+    }
+
+    /** @ORM\PrePersist */
+    public function prePersist()
+    {
+        $this->createdAt = new DateTime();
+        $this->createdBy = $this->email;
+    }
+
+    /** @ORM\PreUpdate */
+    public function preUpdate()
+    {
+        $this->updatedAt = new DateTime();
+        $this->updatedBy = $this->email;
     }
 }

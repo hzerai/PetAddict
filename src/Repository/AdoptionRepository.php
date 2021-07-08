@@ -8,6 +8,7 @@ use App\Entity\Animal;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query\AST\Join;
+use Doctrine\ORM\Query\ResultSetMapping;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -30,7 +31,7 @@ class AdoptionRepository extends ServiceEntityRepository
     public function findWithCriteria($criteria = null,  array $orderBy = null, $limit = null, $offset = null)
     {
         $query =  $this->createQueryBuilder('a');
-       
+
         if (count($criteria) > 0) {
             if (isset($criteria['espece']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
                 $query->innerJoin(
@@ -61,13 +62,13 @@ class AdoptionRepository extends ServiceEntityRepository
                     User::class,
                     'c',
                     'WITH',
-                    'c.id = a.user'
+                    'c.id = a.userId'
                 );
                 $query->innerJoin(
                     Address::class,
                     'd',
                     'WITH',
-                    'd.id = c.address'
+                    'd.id = c.addressId'
                 );
                 if (isset($criteria['ville'])) {
                     $query->andWhere('d.ville = :ville')
@@ -80,8 +81,8 @@ class AdoptionRepository extends ServiceEntityRepository
             }
             $query->select('a');
             if (isset($criteria['user_id'])) {
-                $query->andWhere('a.user = :user')
-                    ->setParameter('user', $criteria['user_id']);
+                $query->andWhere('a.userId = :userId')
+                    ->setParameter('userId', $criteria['user_id']);
             }
         }
         return  $query->orderBy('a.id', 'DESC')
@@ -94,8 +95,138 @@ class AdoptionRepository extends ServiceEntityRepository
     /**
      * @return Adoption[] Returns an array of Adoption objects
      */
+    public function elasticSearch($key)
+    {
+        $result = [];
+        $query =  $this->createQueryBuilder('a');
+        $query->Where('a.title LIKE :title')
+            ->setParameter('title', '%' . $key . '%');
+        $query->orWhere('a.description LIKE :description')
+            ->setParameter('description', '%' . $key . '%');
+        $query->innerJoin(
+            Animal::class,
+            'b',
+            'WITH',
+            'b.id = a.animal'
+        );
+        $query->orWhere('b.espece LIKE :espece')
+            ->setParameter('espece', '%' . $key . '%');
+        $query->orWhere('b.type LIKE :type')
+            ->setParameter('type', '%' . $key . '%');
+        $query->orWhere('b.taille LIKE :taille')
+            ->setParameter('taille', '%' . $key . '%');
+        $query->orWhere('b.sexe LIKE :sexe')
+            ->setParameter('sexe', '%' . $key . '%');
+        $query->orWhere('b.couleur LIKE :couleur')
+            ->setParameter('couleur', '%' . $key . '%');
+        $query->select('a');
+        $result1 =   $query->orderBy('a.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+
+        $query =  $this->createQueryBuilder('a');
+        $query->innerJoin(
+            Animal::class,
+            'b',
+            'WITH',
+            'b.id = a.animal'
+        );
+        $query->innerJoin(
+            User::class,
+            'c',
+            'WITH',
+            'c.id = a.userId'
+        );
+        $query->innerJoin(
+            Address::class,
+            'd',
+            'WITH',
+            'd.id = c.addressId'
+        );
+        $query->orWhere('d.ville LIKE :ville')
+            ->setParameter('ville', '%' . $key . '%');
+        $query->orWhere('d.municipality LIKE :municipality')
+            ->setParameter('municipality', '%' . $key . '%');
+        $query->orWhere('d.details LIKE :details')
+            ->setParameter('details', '%' . $key . '%');
+        $query->select('a');
+        $result2 =   $query->orderBy('a.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return array_merge($result1, $result2);
+    }
+
+    /**
+     * @return Adoption[] Returns an array of Adoption objects
+     */
+    public function countFiltered($criteria = null)
+    {
+        $query =  $this->createQueryBuilder('a');
+
+        if (count($criteria) > 0) {
+            if (isset($criteria['espece']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
+                $query->innerJoin(
+                    Animal::class,
+                    'b',
+                    'WITH',
+                    'b.id = a.animalId'
+                );
+                if (isset($criteria['espece'])) {
+                    $query->andWhere('b.espece = :espece')
+                        ->setParameter('espece', $criteria['espece']);
+                }
+                if (isset($criteria['type'])) {
+                    $query->andWhere('b.type = :type')
+                        ->setParameter('type', $criteria['type']);
+                }
+                if (isset($criteria['taille'])) {
+                    $query->andWhere('b.taille = :taille')
+                        ->setParameter('taille', $criteria['taille']);
+                }
+                if (isset($criteria['sexe'])) {
+                    $query->andWhere('b.sexe = :sexe')
+                        ->setParameter('sexe', $criteria['sexe']);
+                }
+            }
+            if (isset($criteria['ville']) || isset($criteria['municipality'])) {
+                $query->innerJoin(
+                    User::class,
+                    'c',
+                    'WITH',
+                    'c.id = a.userId'
+                );
+                $query->innerJoin(
+                    Address::class,
+                    'd',
+                    'WITH',
+                    'd.id = c.addressId'
+                );
+                if (isset($criteria['ville'])) {
+                    $query->andWhere('d.ville = :ville')
+                        ->setParameter('ville', $criteria['ville']);
+                }
+                if (isset($criteria['municipality'])) {
+                    $query->andWhere('d.municipality = :municipality')
+                        ->setParameter('municipality', $criteria['municipality']);
+                }
+            }
+            $query->select('a');
+            if (isset($criteria['user_id'])) {
+                $query->andWhere('a.userId = :userId')
+                    ->setParameter('userId', $criteria['user_id']);
+            }
+        }
+        return  $query->select('count(a.id)')->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * @return Adoption[] Returns an array of Adoption objects
+     */
     public function findPaged($offset, $size)
-    {        
+    {
         return $this->createQueryBuilder('a')
             ->orderBy('a.id', 'DESC')
             ->setFirstResult($offset)

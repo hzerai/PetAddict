@@ -74,11 +74,12 @@ class AppFixtures extends Fixture
 
                 $user->setFavoriteAnimal(Animals::TURTLE);
             }
-            $adoption->setAnimal($animal);
-            $animal->setAdoption($adoption);
-            $user->addAdoption($adoption);
-            $manager->persist($adoption);
+            $manager->persist($animal);
+
+            $adoption->setAnimalId($animal->getId());
             $manager->persist($user);
+            $adoption->setUserId($user->getId());
+            $manager->persist($adoption);
         }
 
         $manager->flush();

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Notification;
 use App\Repository\NotificationRepository;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -12,6 +13,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Phpfastcache\CacheManager;
 use Phpfastcache\Config\ConfigurationOption;
+
 /**
  *@Route("/api/notification")
  */
@@ -28,14 +30,11 @@ class NotificationController extends AbstractController
         $this->notificationRepo = $notificationRepo;
         $this->serializer = $serializer;
         $this->em = $em;
-        CacheManager::setDefaultConfig(new ConfigurationOption([
-            'path' => 'App\Cache', 
-        ]));
-        $this->InstanceCache = CacheManager::getInstance('files');
+        // CacheManager::setDefaultConfig(new ConfigurationOption([
+        //     'path' => 'App\Cache', 
+        // ]));
+        // $this->InstanceCache = CacheManager::getInstance('files');
     }
-
-
-
 
     /**
      * @Route("", name="get_user_notification" , methods = "GET")
@@ -43,7 +42,7 @@ class NotificationController extends AbstractController
     public function getUserNotifications(): Response
     {
         $user_id = $this->getuser()->getEmail();
-        $allUserNotifications = $this->notificationRepo->findByToUser($user_id);
+        $allUserNotifications = $this->notificationRepo->findNew($user_id);
         return new Response($this->serializer->serialize(array_reverse($allUserNotifications), 'json'), Response::HTTP_OK);
     }
 
@@ -59,18 +58,9 @@ class NotificationController extends AbstractController
         $notification->setRoute($data['route']);
         $notification->setToUser($data['toUser']);
         $notification->setFromUser($fromUser);
+        $notification->setCreatedBy($fromUser);
         $this->em->persist($notification);
         $this->em->flush();
-        $CachedString = $this->InstanceCache->getItem('NOTIF' . $this->clean($data['toUser']));
-        if (!$CachedString->isHit() || $CachedString->isNull()) {
-            $CachedString->set([$notification])->expiresAfter(3600);
-            $this->InstanceCache->save($CachedString);
-        } else {
-            $array = $CachedString->get();
-            array_push($array, $notification);
-            $CachedString->set($array);
-            $this->InstanceCache->save($CachedString);
-        }
         return new Response($this->serializer->serialize($notification, 'json'), Response::HTTP_OK);
     }
 
@@ -79,33 +69,9 @@ class NotificationController extends AbstractController
      */
     public function readNotification($id): Response
     {
-        $notification = $this->notificationRepo->find($id);
-        $notification->setVu(true);
-        $this->em->persist($notification);
-        $this->em->flush();
-        return new Response($this->serializer->serialize($notification, 'json'), Response::HTTP_OK);
-    }
-
-
-    /**
-     * @Route("/{key}/new", name="notifications_stream" , methods = "GET")
-     */
-    public function notificationsStream($key)
-    {
-
-        $CachedString = $this->InstanceCache->getItem('NOTIF' . $this->clean($key));
-        if (!$CachedString->isHit() || $CachedString->isNull()) {
-            return null;
-        } else {
-            $result = $this->serializer->serialize($CachedString->get(), 'json');
-            $CachedString->set(null);
-            $this->InstanceCache->save($CachedString);
-            return new Response($result, Response::HTTP_OK);
-        }
-    }
-
-    function clean($string)
-    {
-        return preg_replace('/[^A-Za-z0-9\-]/', '', json_encode($string)); // Removes special chars.
+        $sql = 'update notification set vu = true where id = :id';
+        $params['id'] = $id;
+        $this->em->getConnection()->executeQuery($sql, $params);
+        return new Response(Response::HTTP_OK);
     }
 }

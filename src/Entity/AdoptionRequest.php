@@ -24,10 +24,7 @@ class AdoptionRequest
      */
     private $status = "CREATED";
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="adoptionRequests")
-     * @ORM\JoinColumn(nullable=false)
-     */
+   
     private $user;
 
     /**
@@ -50,11 +47,18 @@ class AdoptionRequest
      */
     private $updatedBy;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=Adoption::class, inversedBy="adoptionRequests")
-     * @ORM\JoinColumn(nullable=false)
-     */
+   
     private $adoption;
+
+     /**
+     * @ORM\Column(type="integer")
+     */
+    private $userId;
+
+     /**
+     * @ORM\Column(type="integer")
+     */
+    private $adoptionId;
 
     public function getId(): ?int
     {
@@ -73,7 +77,29 @@ class AdoptionRequest
         return $this;
     }
 
+    public function getUserId(): ?int
+    {
+        return $this->userId;
+    }
 
+    public function setUserId(?int $userId): self
+    {
+        $this->userId = $userId;
+
+        return $this;
+    }
+
+    public function getAdoptionId(): ?int
+    {
+        return $this->adoptionId;
+    }
+
+    public function setAdoptionId(?int $adoptionId): self
+    {
+        $this->adoptionId = $adoptionId;
+
+        return $this;
+    }
 
     public function getUser(): ?User
     {
@@ -139,14 +165,12 @@ class AdoptionRequest
     public function prePersist()
     {
         $this->createdAt = new DateTime();
-        $this->createdBy = $this->user->getUserName();
     }
 
     /** @ORM\PreUpdate */
     public function preUpdate()
     {
         $this->updatedAt = new DateTime();
-        $this->updatedBy = $this->user->getUserName();
     }
 
     public function getAdoption(): ?Adoption

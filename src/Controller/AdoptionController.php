@@ -5,9 +5,12 @@ namespace App\Controller;
 use App\Entity\Adoption;
 use App\Entity\AdoptionRequest;
 use App\Entity\Animal;
+use App\Repository\AddressRepository;
 use App\Repository\AdoptionRepository;
 use App\Repository\AdoptionRequestRepository;
 use App\Repository\AnimalRepository;
+use App\Repository\UserRepository;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,20 +34,34 @@ class AdoptionController extends AbstractFOSRestController
     private $serializer;
     private $animalRepo;
     private $adoptionRequestRepository;
+    private $userRepo;
+    private $addressRepository;
 
 
-    public function __construct(AdoptionRequestRepository $adoptionRequestRepository,AdoptionRepository $repository, EntityManagerInterface $em, SerializerInterface $serializer, AnimalRepository $animalRepo)
-    {
+    public function __construct(
+        AdoptionRequestRepository $adoptionRequestRepository,
+        AdoptionRepository $repository,
+        EntityManagerInterface $em,
+        SerializerInterface $serializer,
+        AnimalRepository $animalRepo,
+        UserRepository $userRepo,
+        AddressRepository $addressRepository
+    ) {
+
         $this->adoptionRepository = $repository;
         $this->entityManager = $em;
         $this->serializer = $serializer;
         $this->animalRepo = $animalRepo;
+        $this->userRepo = $userRepo;
+        $this->addressRepository = $addressRepository;
         $this->adoptionRequestRepository = $adoptionRequestRepository;
     }
+
     function clean($string)
     {
         return preg_replace('/[^A-Za-z0-9\-]/', '', json_encode($string)); // Removes special chars.
     }
+
     /**
      * @Route("/api/adoption", name="adoption_list", methods = "GET")
      */
@@ -61,6 +78,7 @@ class AdoptionController extends AbstractFOSRestController
         $taille = $requst->query->get('taille');
         $sexe = $requst->query->get('sexe');
         $user_id = $requst->query->get('user_id');
+        $key = $requst->query->get('key');
 
         if (
             isset($espece) && strlen($espece) > 0 || isset($type) && strlen($type) > 0 ||
@@ -73,17 +91,78 @@ class AdoptionController extends AbstractFOSRestController
             $criteria['page'] = $page;
             $criteria['size'] = isset($size) ? $size : 6;
             $adoptions = $this->adoptionRepository->findWithCriteria($criteria, null, isset($size) ? $size :  8,  $offset);
+
+            if (isset($key)) {
+                $keys =  explode(",", $key);
+                foreach ($adoptions as $adoption) {
+                    foreach ($keys as $k) {
+                        if ($k == 'user') {
+                            $user =  $this->userRepo->find($adoption->getUserId());
+                            if ($user->getAddressId() != null) {
+                                $address = $this->addressRepository->find($user->getAddressId());
+                                $user->setAddress($address);
+                            }
+                            $adoption->setUser($user);
+                        } else if ($k == 'requests') {
+                            $requests = $this->adoptionRequestRepository->findByAdoptionId($adoption->getId());
+                            foreach ($requests as $ar) {
+                                $adoption->addAdoptionRequest($ar);
+                            }
+                        }
+                    }
+                }
+            }
             return new Response($this->handleCircularReference($adoptions), Response::HTTP_OK);
         }
 
         // if not paginated
         if (!isset($page) && !isset($size)) {
             $adoptions = $this->adoptionRepository->findAll();
+            if (isset($key)) {
+                $keys =  explode(",", $key);
+                foreach ($adoptions as $adoption) {
+                    foreach ($keys as $k) {
+                        if ($k == 'user') {
+                            $user =  $this->userRepo->find($adoption->getUserId());
+                            if ($user->getAddressId() != null) {
+                                $address = $this->addressRepository->find($user->getAddressId());
+                                $user->setAddress($address);
+                            }
+                            $adoption->setUser($user);
+                        } else if ($k == 'requests') {
+                            $requests = $this->adoptionRequestRepository->findByAdoptionId($adoption->getId());
+                            foreach ($requests as $ar) {
+                                $adoption->addAdoptionRequest($ar);
+                            }
+                        }
+                    }
+                }
+            }
             return new Response($this->handleCircularReference($adoptions), Response::HTTP_OK);
         }
         $page = isset($page) && $page > 0 ? $page : 1;
         $offset = isset($size) ? ($page - 1) * $size : ($page - 1) * 8;
         $adoptions = $this->adoptionRepository->findPaged($offset, isset($size) ? $size :  8);
+        if (isset($key)) {
+            $keys =  explode(",", $key);
+            foreach ($adoptions as $adoption) {
+                foreach ($keys as $k) {
+                    if ($k == 'user') {
+                        $user =  $this->userRepo->find($adoption->getUserId());
+                        if ($user->getAddressId() != null) {
+                            $address = $this->addressRepository->find($user->getAddressId());
+                            $user->setAddress($address);
+                        }
+                        $adoption->setUser($user);
+                    } else if ($k == 'requests') {
+                        $requests = $this->adoptionRequestRepository->findByAdoptionId($adoption->getId());
+                        foreach ($requests as $ar) {
+                            $adoption->addAdoptionRequest($ar);
+                        }
+                    }
+                }
+            }
+        }
         return new Response($this->handleCircularReference($adoptions), Response::HTTP_OK);
     }
 
@@ -91,8 +170,28 @@ class AdoptionController extends AbstractFOSRestController
     /**
      * @Route("/api/adoptions/count", name="count_adoption" , methods = "GET")
      */
-    public function count(): Response
+    public function count(Request $requst): Response
     {
+
+
+        $espece = $requst->query->get('espece');
+        $type = $requst->query->get('type');
+        $ville = $requst->query->get('ville');
+        $municipality = $requst->query->get('municipality');
+        $taille = $requst->query->get('taille');
+        $sexe = $requst->query->get('sexe');
+        $user_id = $requst->query->get('user_id');
+
+        if (
+            isset($espece) && strlen($espece) > 0 || isset($type) && strlen($type) > 0 ||
+            isset($taille) && strlen($taille) > 0 || isset($sexe) && strlen($sexe) > 0 ||
+            isset($ville) && strlen($ville) > 0 || isset($municipality) && strlen($municipality) > 0 || isset($user_id) && strlen($user_id) > 0
+        ) {
+            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id);
+            $size = $this->adoptionRepository->countFiltered($criteria);
+            return $this->json($size, Response::HTTP_OK);
+        }
+
         $size = $this->adoptionRepository->count([]);
         return $this->json($size, Response::HTTP_OK);
     }
@@ -100,12 +199,42 @@ class AdoptionController extends AbstractFOSRestController
     /**
      * @Route("/api/adoption/{id}", name="get_adoption" , methods = "GET")
      */
-    public function findOne($id): Response
+    public function findOne($id, Request $requst): Response
     {
         $adoption = $this->adoptionRepository->find($id);
         if ($adoption == null) {
             return new Response('Adoption not found', Response::HTTP_NOT_FOUND);
         }
+        $key = $requst->query->get('key');
+        if (isset($key)) {
+            $keys =  explode(",", $key);
+            foreach ($keys as $k) {
+                if ($k == 'user') {
+                    $user =  $this->userRepo->find($adoption->getUserId());
+                    if ($user->getAddressId() != null) {
+                        $address = $this->addressRepository->find($user->getAddressId());
+                        $user->setAddress($address);
+                    }
+                    $adoption->setUser($user);
+                } else if ($k == 'requests') {
+                    $requests = $this->adoptionRequestRepository->findByAdoptionId($adoption->getId());
+                    foreach ($requests as $ar) {
+                        $adoption->addAdoptionRequest($ar);
+                    }
+                }
+            }
+        }
+        return new Response($this->handleCircularReference($adoption), Response::HTTP_OK);
+    }
+
+
+    /**
+     * @Route("/api/adoptions/elasticsearch", name="elastic_search_adoption" , methods = "GET")
+     */
+    public function elasticSearch(Request $requst): Response
+    {
+        $key = $requst->query->get('keyword');
+        $adoption = $this->adoptionRepository->elasticSearch($key);
         return new Response($this->handleCircularReference($adoption), Response::HTTP_OK);
     }
 
@@ -118,6 +247,11 @@ class AdoptionController extends AbstractFOSRestController
         if ($adoption == null) {
             return new Response('Adoption not found', Response::HTTP_NOT_FOUND);
         }
+        $arequests = $this->adoptionRequestRepository->findByAdoptionId($id);
+        foreach ($arequests as $ar) {
+            $this->entityManager->remove($ar);
+        }
+        $this->entityManager->remove($adoption->getAnimal());
         $this->entityManager->remove($adoption);
         $this->entityManager->flush();
         return new Response($this->handleCircularReference($adoption), Response::HTTP_OK);
@@ -134,6 +268,11 @@ class AdoptionController extends AbstractFOSRestController
             return new Response('Adoption not found', Response::HTTP_NOT_FOUND);
         }
         $adoption = $this->adoptionDto($adoption, $data);
+        $animal = $this->animalDto($adoption->getAnimal(), $data);
+        $user = $this->getUser();
+        $adoption->setUpdatedBy($user->getEmail());
+        $animal->setUpdatedBy($user->getEmail());
+        $adoption->setAnimal($animal);
         $this->entityManager->persist($adoption);
         $this->entityManager->flush();
         return new Response($this->handleCircularReference($adoption), Response::HTTP_OK);
@@ -146,26 +285,32 @@ class AdoptionController extends AbstractFOSRestController
     {
         $data = json_decode($request->getContent(), true);
         $adoption = $this->adoptionDto(new Adoption(), $data);
+        $animal = $this->animalDto(new Animal(), $data);
+        $user = $this->getUser();
+        $adoption->setCreatedBy($user->getEmail());
+        $adoption->setUserId($user->getId());
+        $animal->setCreatedBy($user->getEmail());
+        $adoption->setAnimal($animal);
         $this->entityManager->persist($adoption);
         $this->entityManager->flush();
+        $adoption->setUser($user);
         return new Response($this->handleCircularReference($adoption), Response::HTTP_CREATED);
     }
 
     private function adoptionDto(Adoption $adoption, $data)
     {
-        $adoption->setUser($this->getUser());
         if (isset($data['title'])) {
             $adoption->setTitle($data['title']);
         }
         if (isset($data['description'])) {
             $adoption->setDescription($data['description']);
         }
+        return $adoption;
+    }
+
+    private function animalDto(Animal $animal, $data)
+    {
         if (isset($data['animal'])) {
-            $animal = $adoption->getAnimal();
-            if ($animal == null) {
-                $animal = new Animal();
-                $animal->setAdoption($adoption);
-            }
             if (isset($data['animal']['type'])) {
                 $animal->setType($data['animal']['type']);
             }
@@ -188,7 +333,7 @@ class AdoptionController extends AbstractFOSRestController
                 $animal->setNom($data['animal']['nom']);
             }
         }
-        return $adoption;
+        return $animal;
     }
 
     private function createCriteria($espece = null, $type = null, $taille = null, $sexe = null, $ville = null, $municipality = null, $user_id = null): array
@@ -214,7 +359,7 @@ class AdoptionController extends AbstractFOSRestController
             $criteria['municipality'] = $municipality;
         }
         if (isset($user_id) && strlen($user_id) > 0) {
-            $criteria['user'] = $user_id;
+            $criteria['user_id'] = $user_id;
         }
         return $criteria;
     }
@@ -235,63 +380,56 @@ class AdoptionController extends AbstractFOSRestController
      */
     public function createAdoptionRequest($id): Response
     {
-        $adoption = $this->adoptionRepository->find((int) $id);
-        if ($this->getUser() != null && $adoption != null) {
-            $adoptionRequest = new AdoptionRequest();
-            $adoptionRequest->setAdoption($adoption);
-            $adoptionRequest->setUser($this->getUser());
-        } else {
-            return new Response('Null adoption', Response::HTTP_FORBIDDEN);
-        }
+        $user = $this->getUser();
+        $adoptionRequest = new AdoptionRequest();
+        $adoptionRequest->setAdoptionId((int) $id);
+        $adoptionRequest->setUserId($user->getId());
+        $adoptionRequest->setCreatedBy($user->getEmail());
         $this->entityManager->persist($adoptionRequest);
         $this->entityManager->flush();
         return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_CREATED);
     }
 
-    
     /**
      * @Route("/api/adoptionRequest/{id}/accept", name="accept_adoption_request" , methods = "POST")
      */
     public function acceptAdoptionRequest($id): Response
     {
-        $adoptionRequest = $this->adoptionRequestRepository->find((int) $id);
-        $adoptionRequest->setStatus("ACCEPTED");
-        $this->entityManager->persist($adoptionRequest);
-        $this->entityManager->flush();
-        return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_CREATED);
+        $sql = 'update adoption_request set status = :status , updated_by = :usr , updated_at = :d where id = :id';
+        $params['id'] = $id;
+        $params['status'] = "ACCEPTED";
+        $params['usr'] = $this->getUser()->getEmail();
+        $params['d'] = date_format(new DateTime(), 'Y-m-d H:i:s');
+        $this->entityManager->getConnection()->executeQuery($sql, $params);
+        return new Response(Response::HTTP_ACCEPTED);
     }
 
     /**
-     * @Route("/api/adoptionRequest/{id}", name="get_adoption_request" , methods = "GET")
-     */
-    public function getAdoptionRequest($id): Response
-    {
-        $adoptionRequest = $this->adoptionRequestRepository->find((int) $id);       
-        return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_CREATED);
-    }
-
-     /**
      * @Route("/api/adoptionRequest/{id}/reject", name="reject_adoption_request" , methods = "POST")
      */
     public function rejectAdoptionRequest($id): Response
     {
-        $adoptionRequest = $this->adoptionRequestRepository->find((int) $id);
-        $adoptionRequest->setStatus("REJECTED");
-        $this->entityManager->persist($adoptionRequest);
-        $this->entityManager->flush();
-        return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_CREATED);
+        $sql = 'update adoption_request set status = :status , updated_by = :usr , updated_at = :d where id = :id';
+        $params['id'] = $id;
+        $params['status'] = "REJECTED";
+        $params['usr'] = $this->getUser()->getEmail();
+        $params['d'] = date_format(new DateTime(), 'Y-m-d H:i:s');
+        $this->entityManager->getConnection()->executeQuery($sql, $params);
+        return new Response(Response::HTTP_ACCEPTED);
     }
 
-      /**
+    /**
      * @Route("/api/adoptionRequest/{id}/cancel", name="cancel_adoption_request" , methods = "POST")
      */
     public function cancelAdoptionRequest($id): Response
     {
-        $adoptionRequest = $this->adoptionRequestRepository->find((int) $id);
-        $adoptionRequest->setStatus("CANCELED");
-        $this->entityManager->persist($adoptionRequest);
-        $this->entityManager->flush();
-        return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_CREATED);
+        $sql = 'update adoption_request set status = :status , updated_by = :usr , updated_at = :d where id = :id';
+        $params['id'] = $id;
+        $params['status'] = "CANCELED";
+        $params['usr'] = $this->getUser()->getEmail();
+        $params['d'] = date_format(new DateTime(), 'Y-m-d H:i:s');
+        $this->entityManager->getConnection()->executeQuery($sql, $params);
+        return new Response(Response::HTTP_ACCEPTED);
     }
 
     /**
@@ -299,19 +437,70 @@ class AdoptionController extends AbstractFOSRestController
      */
     public function reopenAdoptionRequest($id): Response
     {
-        $adoptionRequest = $this->adoptionRequestRepository->find((int) $id);
-        $adoptionRequest->setStatus("CREATED");
-        $this->entityManager->persist($adoptionRequest);
-        $this->entityManager->flush();
-        return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_CREATED);
+        $sql = 'update adoption_request set status = :status , updated_by = :usr , updated_at = :d where id = :id';
+        $params['id'] = $id;
+        $params['status'] = "CREATED";
+        $params['usr'] = $this->getUser()->getEmail();
+        $params['d'] = date_format(new DateTime(), 'Y-m-d H:i:s');
+        $this->entityManager->getConnection()->executeQuery($sql, $params);
+        return new Response(Response::HTTP_ACCEPTED);
     }
 
     /**
-     * @Route("/api/animal", name="get_animals" , methods = "GET")
+     * @Route("/api/adoptionRequest/{id}", name="get_adoption_request" , methods = "GET")
      */
-    public function getAllAnimals(): Response
+    public function getAdoptionRequest($id): Response
     {
-        $animals = $this->animalRepo->findAll();
-        return new Response($this->handleCircularReference($animals), Response::HTTP_CREATED);
+        $adoptionRequest = $this->adoptionRequestRepository->find((int) $id);
+        return new Response($this->handleCircularReference($adoptionRequest), Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/adoptionRequest/user/{email}", name="get_user_adoption_requests" , methods = "GET")
+     */
+    public function getUserAdoptionRequest($email): Response
+    {
+        $adoptionRequests = $this->adoptionRequestRepository->findByCreatedBy($email);
+        return new Response($this->handleCircularReference($adoptionRequests), Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/adoptionRequest/user/{id}", name="get_adoption_adoption_requests" , methods = "GET")
+     */
+    public function getAdoptionAdoptionRequest($id): Response
+    {
+        $adoptionRequests = $this->adoptionRequestRepository->findByAdoptionId($id);
+        return new Response($this->handleCircularReference($adoptionRequests), Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/adoptionRequest/{email}/canadopot/{id}", name="can_user_adopt" , methods = "GET")
+     */
+    public function canAdopt($email, $id): Response
+    {
+        $adoptions = $this->adoptionRepository->findByCreatedBy($email);
+        foreach ($adoptions as $a) {
+            if ($a->getId() == $id) {
+                return new Response($this->serializer->serialize(false, 'json'), Response::HTTP_OK);
+            }
+        }
+
+        $adoptionRequests = $this->adoptionRequestRepository->findByAdoptionId($id);
+        foreach ($adoptionRequests as $ar) {
+            if ($ar->getCreatedBy() == $email) {
+                return new Response($this->serializer->serialize(false, 'json'), Response::HTTP_OK);
+            }
+        }
+
+        return new Response($this->serializer->serialize(true, 'json'), Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/animal/{id}", name="get_animal" , methods = "GET")
+     */
+    public function getAnimal($id): Response
+    {
+        $animal = $this->animalRepo->find((int) $id);
+        return new Response($this->handleCircularReference($animal), Response::HTTP_OK);
     }
 }

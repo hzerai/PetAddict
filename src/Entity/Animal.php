@@ -46,12 +46,7 @@ class Animal
     /**
      * @ORM\Column(type="string", length=255, nullable=true)
      */
-    private $type;
-
-    /**
-     * @ORM\OneToOne(targetEntity=Adoption::class, mappedBy="animal", cascade={"persist", "remove"})
-     */
-    private $adoption;
+    private $type;    
 
     /**
      * @ORM\Column(type="string", length=255, nullable=true)
@@ -207,31 +202,12 @@ class Animal
     public function prePersist()
     {
         $this->createdAt = new DateTime();
-        $this->createdBy = $this->getAdoption()->getUser()->getUserName();
     }
 
     /** @ORM\PreUpdate */
     public function preUpdate()
     {
         $this->updatedAt = new DateTime();
-        $this->updatedBy = $this->getAdoption()->getUser()->getUserName();
-    }
-
-    public function getAdoption(): ?Adoption
-    {
-        return $this->adoption;
-    }
-
-    public function setAdoption(Adoption $adoption): self
-    {
-        // set the owning side of the relation if necessary
-        if ($adoption->getAnimal() !== $this) {
-            $adoption->setAnimal($this);
-        }
-
-        $this->adoption = $adoption;
-
-        return $this;
     }
 
     public function getNom(): ?string

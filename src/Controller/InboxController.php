@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Message;
 use App\Repository\MessageRepository;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,10 +26,10 @@ class InboxController extends AbstractController
     private $InstanceCache;
     public function __construct(MessageRepository $messageRepo, SerializerInterface $serializer, EntityManagerInterface $em)
     {
-        CacheManager::setDefaultConfig(new ConfigurationOption([
-            'path' => 'App\Cache',
-        ]));
-        $this->InstanceCache = CacheManager::getInstance('files');
+        // CacheManager::setDefaultConfig(new ConfigurationOption([
+        //     'path' => 'App\Cache',
+        // ]));
+        // $this->InstanceCache = CacheManager::getInstance('files');
         $this->messageRepo = $messageRepo;
         $this->serializer = $serializer;
         $this->em = $em;
@@ -64,7 +65,6 @@ class InboxController extends AbstractController
     public function getUserNewMessages(): Response
     {
         $user_id = $this->getuser()->getEmail();
-        $inbox = [];
         $allUserMessages = $this->messageRepo->findUserNewMessages($user_id);
         return new Response($this->serializer->serialize($allUserMessages, 'json'), Response::HTTP_OK);
     }
@@ -81,39 +81,7 @@ class InboxController extends AbstractController
         $message->setFromUser($fromUser);
         $this->em->persist($message);
         $this->em->flush();
-        $CachedString = $this->InstanceCache->getItem($this->clean($data['toUser']));
-        if (!$CachedString->isHit() || $CachedString->isNull()) {
-            $CachedString->set([$message])->expiresAfter(3600);
-            $this->InstanceCache->save($CachedString);
-        } else {
-            $array = $CachedString->get();
-            array_push($array, $message);
-            $CachedString->set($array);
-            $this->InstanceCache->save($CachedString);
-        }
         return new Response($this->serializer->serialize($message, 'json'), Response::HTTP_OK);
-    }
-
-    /**
-     * @Route("/{key}/new", name="messages_stream" , methods = "GET")
-     */
-    public function messagesStream($key)
-    {
-
-        $CachedString = $this->InstanceCache->getItem($this->clean($key));
-        if (!$CachedString->isHit() || $CachedString->isNull()) {
-            return null;
-        } else {
-            $result = $this->serializer->serialize($CachedString->get(), 'json');
-            $CachedString->set(null);
-            $this->InstanceCache->save($CachedString);
-            return new Response($result, Response::HTTP_OK);
-        }
-    }
-
-    function clean($string)
-    {
-        return preg_replace('/[^A-Za-z0-9\-]/', '', json_encode($string)); // Removes special chars.
     }
 
     /**
@@ -121,10 +89,11 @@ class InboxController extends AbstractController
      */
     public function readMessage($id): Response
     {
-        $message = $this->messageRepo->find($id);
-        $message->setVu(true);
-        $this->em->persist($message);
-        $this->em->flush();
-        return new Response($this->serializer->serialize($message, 'json'), Response::HTTP_OK);
+        $sql = 'update message set vu = true , updated_by = :usr , updated_at = :d where id = :id';
+        $params['id'] = $id;
+        $params['usr'] =$this->getUser()->getEmail();
+        $params['d'] = date_format(new DateTime(), 'Y-m-d H:i:s');
+        $this->em->getConnection()->executeQuery($sql, $params);
+        return new Response(Response::HTTP_OK);
     }
 }

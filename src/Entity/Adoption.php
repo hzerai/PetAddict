@@ -51,26 +51,25 @@ class Adoption
      */
     private $updatedBy;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="adoptions")
-     * @ORM\JoinColumn(nullable=true)
-     */
+
     private $user;
 
-    /**
-     * @ORM\OneToMany(targetEntity=AdoptionRequest::class, mappedBy="adoption", orphanRemoval=true)
-     */
-    private $adoptionRequests;
+    private $adoptionRequests = [];
+
 
     /**
-     * @ORM\OneToOne(targetEntity=Animal::class, inversedBy="adoption", cascade={"persist", "remove"})
+     * @ORM\Column(type="integer")
+     */
+    private $userId;
+
+    /**
+     * @ORM\OneToOne(targetEntity=Animal::class, cascade={"persist", "remove"})
      * @ORM\JoinColumn(nullable=false)
      */
     private $animal;
 
     public function __construct()
     {
-        $this->adoptionRequests = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -89,6 +88,19 @@ class Adoption
 
         return $this;
     }
+
+    public function getUserId(): ?int
+    {
+        return $this->userId;
+    }
+
+    public function setUserId(?int $userId): self
+    {
+        $this->userId = $userId;
+
+        return $this;
+    }
+
 
     public function getDescription(): ?string
     {
@@ -154,14 +166,12 @@ class Adoption
     public function prePersist()
     {
         $this->createdAt = new DateTime();
-        $this->createdBy = $this->user->getUserName();
     }
 
     /** @ORM\PreUpdate */
     public function preUpdate()
     {
         $this->updatedAt = new DateTime();
-        $this->updatedBy = $this->user->getUserName();
     }
 
     public function getUser(): ?User
@@ -176,33 +186,9 @@ class Adoption
         return $this;
     }
 
-    /**
-     * @return Collection|AdoptionRequest[]
-     */
-    public function getAdoptionRequests(): Collection
+    public function addAdoptionRequest($adoptionRequest): self
     {
-        return $this->adoptionRequests;
-    }
-
-    public function addAdoptionRequest(AdoptionRequest $adoptionRequest): self
-    {
-        if (!$this->adoptionRequests->contains($adoptionRequest)) {
-            $this->adoptionRequests[] = $adoptionRequest;
-            $adoptionRequest->setAdoption($this);
-        }
-
-        return $this;
-    }
-
-    public function removeAdoptionRequest(AdoptionRequest $adoptionRequest): self
-    {
-        if ($this->adoptionRequests->removeElement($adoptionRequest)) {
-            // set the owning side to null (unless already changed)
-            if ($adoptionRequest->getAdoption() === $this) {
-                $adoptionRequest->setAdoption(null);
-            }
-        }
-
+        array_push($this->adoptionRequests, $adoptionRequest);
         return $this;
     }
 

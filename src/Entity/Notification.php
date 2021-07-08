@@ -119,41 +119,34 @@ class Notification
         return $this;
     }
 
-     /** @ORM\PrePersist */
-     public function prePersist()
-     {
-         $this->createdAt = new DateTime();
-         $this->createdBy = $this->fromUser;
-     }
- 
-     /** @ORM\PreUpdate */
-     public function preUpdate()
-     {
-         $this->updatedAt = new DateTime();
-         $this->createdBy = $this->fromUser;
-     }
+    /** @ORM\PrePersist */
+    public function prePersist()
+    {
+        $this->createdAt = new DateTime();
+        $this->createdBy = $this->fromUser;
+    }
 
-     public function getVu(): ?bool
-     {
-         return $this->vu;
-     }
+    public function getVu(): ?bool
+    {
+        return $this->vu;
+    }
 
-     public function setVu(bool $vu): self
-     {
-         $this->vu = $vu;
+    public function setVu(bool $vu): self
+    {
+        $this->vu = $vu;
 
-         return $this;
-     }
+        return $this;
+    }
 
-     public function getRoute(): ?string
-     {
-         return $this->route;
-     }
+    public function getRoute(): ?string
+    {
+        return $this->route;
+    }
 
-     public function setRoute(?string $route): self
-     {
-         $this->route = $route;
+    public function setRoute(?string $route): self
+    {
+        $this->route = $route;
 
-         return $this;
-     }
+        return $this;
+    }
 }

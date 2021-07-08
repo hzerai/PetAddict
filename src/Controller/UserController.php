@@ -6,10 +6,12 @@ use App\Entity\Address;
 use App\Entity\Adoption;
 use App\Entity\AdoptionRequest;
 use App\Entity\User;
+use App\Repository\AddressRepository;
 use App\Repository\AdoptionRepository;
 use App\Repository\AdoptionRequestRepository;
 use App\Repository\UserRepository;
 use DateTime;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,6 +23,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 //cache
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Validator\Constraints\Collection;
 use Symfony\Contracts\Cache\ItemInterface;
 
 /**
@@ -32,11 +35,21 @@ class UserController extends AbstractController
     private $entityManager;
     private $passwordEncoder;
     private $serializer;
+    private $addressRepository;
+    private $adoptionRepo;
+    private $adoptionRequestRepo;
 
 
-    public function __construct(UserRepository $repository, AdoptionRepository $adoptionRepo, 
-    AdoptionRequestRepository $adoptionRequestRepo, EntityManagerInterface $em, UserPasswordEncoderInterface $passwordEncoder, SerializerInterface $serializer)
-    {
+    public function __construct(
+        AddressRepository $addressRepository,
+        UserRepository $repository,
+        AdoptionRepository $adoptionRepo,
+        AdoptionRequestRepository $adoptionRequestRepo,
+        EntityManagerInterface $em,
+        UserPasswordEncoderInterface $passwordEncoder,
+        SerializerInterface $serializer
+    ) {
+        $this->addressRepository = $addressRepository;
         $this->userRepository = $repository;
         $this->entityManager = $em;
         $this->passwordEncoder = $passwordEncoder;
@@ -49,14 +62,48 @@ class UserController extends AbstractController
     /**
      * @Route("{id}", name="get_user" , methods = "GET")
      */
-    public function findOne($id): Response
+    public function findOne($id, Request $requst): Response
     {
-            $user = $this->userRepository->find($id);
-            if ($user == null) {
-                return new Response('User not found', Response::HTTP_NOT_FOUND);
+        $user = $this->userRepository->find($id);
+        if ($user == null) {
+            return new Response('User not found', Response::HTTP_NOT_FOUND);
+        }
+        if ($user->getAddressId() != null) {
+            $address = $this->addressRepository->find($user->getAddressId());
+            $user->setAddress($address);
+        }
+        $user->setPassword('********');
+        $key = $requst->query->get('key');
+        $user->setAdoptions(new ArrayCollection());
+        $user->setAdoptionRequests(new ArrayCollection());
+        $user->setRecievedAdoptionRequests(new ArrayCollection());
+        if (isset($key)) {
+            $keys =  explode(",", $key);
+            foreach ($keys as $k) {
+                if ($k == 'adoptions') {
+                    $adoptions = $this->adoptionRepo->findByUserId($user->getId());
+                    foreach ($adoptions as $adoption) {
+                        $user->addAdoption($adoption);
+                        $recievedRequests = $this->adoptionRequestRepo->findByAdoptionId($adoption->getId());
+                        foreach ($recievedRequests as $r) {
+                            $requester = $this->userRepository->findOneById($r->getUserId());
+                            $r->setUser($requester);
+                            $r->setAdoption($adoption);
+                            $user->addRecievedAdoptionRequest($r);
+                            $adoption->addAdoptionRequest($r);
+                        }
+                    }
+                } else if ($k == 'requests') {
+                    $sentRequests = $this->adoptionRequestRepo->findByUserId($user->getId());
+                    foreach ($sentRequests as $r) {
+                        $user->addAdoptionRequest($r);
+                        $adoption = $this->adoptionRepo->find($r->getAdoptionId());
+                        $r->setAdoption($adoption);
+                    }
+                }
             }
-            $user->setPassword('********');
-            return new Response($this->handleCircularReference($user), Response::HTTP_OK);
+        }
+        return new Response($this->handleCircularReference($user), Response::HTTP_OK);
     }
 
 
@@ -69,6 +116,24 @@ class UserController extends AbstractController
         return new Response($this->handleCircularReference($users), Response::HTTP_OK);
     }
 
+    /**
+     * @Route("addresses/find/all", name="get_all_addresses" , methods = "GET")
+     */
+    public function findAllAdresses(): Response
+    {
+        $addresses = $this->addressRepository->findAll();
+        return new Response($this->handleCircularReference($addresses), Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("addresses/{id}", name="get_one_address" , methods = "GET")
+     */
+    public function findOneAdress($id): Response
+    {
+        $address = $this->addressRepository->find($id);
+        return new Response($this->handleCircularReference($address), Response::HTTP_OK);
+    }
+
 
     function clean($string)
     {
@@ -78,13 +143,47 @@ class UserController extends AbstractController
     /**
      * @Route("user_by_email/{email}", name="get_user_by_email" , methods = "GET")
      */
-    public function findByEmail($email): Response
+    public function findByEmail($email, Request $requst): Response
     {
         $user = $this->userRepository->findOneByEmail($email);
         if ($user == null) {
             return new Response('User not found', Response::HTTP_NOT_FOUND);
         }
+        if ($user->getAddressId() != null) {
+            $address = $this->addressRepository->find($user->getAddressId());
+            $user->setAddress($address);
+        }
         $user->setPassword('********');
+        $key = $requst->query->get('key');
+        $user->setAdoptions(new ArrayCollection());
+        $user->setAdoptionRequests(new ArrayCollection());
+        $user->setRecievedAdoptionRequests(new ArrayCollection());
+        if (isset($key)) {
+            $keys =  explode(",", $key);
+            foreach ($keys as $k) {
+                if ($k == 'adoptions') {
+                    $adoptions = $this->adoptionRepo->findByUserId($user->getId());
+                    foreach ($adoptions as $adoption) {
+                        $user->addAdoption($adoption);
+                        $recievedRequests = $this->adoptionRequestRepo->findByAdoptionId($adoption->getId());
+                        foreach ($recievedRequests as $r) {
+                            $requester = $this->userRepository->findOneById($r->getUserId());
+                            $r->setUser($requester);
+                            $r->setAdoption($adoption);
+                            $user->addRecievedAdoptionRequest($r);
+                            $adoption->addAdoptionRequest($r);
+                        }
+                    }
+                } else if ($k == 'requests') {
+                    $sentRequests = $this->adoptionRequestRepo->findByUserId($user->getId());
+                    foreach ($sentRequests as $r) {
+                        $user->addAdoptionRequest($r);
+                        $adoption = $this->adoptionRepo->find($r->getAdoptionId());
+                        $r->setAdoption($adoption);
+                    }
+                }
+            }
+        }
         return new Response($this->handleCircularReference($user), Response::HTTP_OK);
     }
 
@@ -94,6 +193,7 @@ class UserController extends AbstractController
      */
     public function delete($id): Response
     {
+        //TODO : Acctually disable
         $user = $this->userRepository->find($id);
         if ($user == null) {
             return new Response('User not found', Response::HTTP_NOT_FOUND);
@@ -116,6 +216,17 @@ class UserController extends AbstractController
         $user = $this->userRepository->find($id);
         if ($user == null) {
             return new Response('User not found', Response::HTTP_NOT_FOUND);
+        }
+        if (isset($data['address'])) {
+            $address = $this->addressRepository->find($id);
+            if ($address == null) {
+                $address = new Address();
+            }
+            $address = $this->addressDto($address, $data);
+            $this->entityManager->persist($address);
+            $this->entityManager->flush();
+            $user->setAddressId($address->getId());
+            $user->setAddress($address);
         }
         $user = $this->userDto($user, $data);
         $this->entityManager->persist($user);
@@ -183,8 +294,12 @@ class UserController extends AbstractController
         if (isset($data['favoriteAnimal'])) {
             $user->setFavoriteAnimal($data['favoriteAnimal']);
         }
+        return $user;
+    }
+
+    private function addressDto(Address $address, $data)
+    {
         if (isset($data['address'])) {
-            $address = $user->getAddress();
             if ($address == null) {
                 $address = new Address();
             }
@@ -197,9 +312,8 @@ class UserController extends AbstractController
             if (isset($data['address']['details'])) {
                 $address->setDetails($data['address']['details']);
             }
-            $user->setAddress($address);
         }
-        return $user;
+        return $address;
     }
 
     function handleCircularReference($objectToSerialize)
