@@ -76,8 +76,9 @@ class AppFixtures extends Fixture
             }
             $manager->persist($animal);
 
-            $adoption->setAnimalId($animal->getId());
+            $adoption->setAnimal($animal);
             $manager->persist($user);
+            $manager->flush();
             $adoption->setUserId($user->getId());
             $manager->persist($adoption);
         }
