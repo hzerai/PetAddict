@@ -20,7 +20,7 @@ class Comment
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255, nullable=true)
+     * @ORM\Column(type="text", nullable=false)
      */
     private $body;
 
@@ -58,6 +58,10 @@ class Comment
      * @ORM\OneToMany(targetEntity=Comment::class, mappedBy="comment",cascade={"persist", "remove"})
      */
     private $comments;
+  /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $userFullName;
 
     public function __construct()
     {
@@ -160,6 +164,17 @@ class Comment
     public function setComment(?self $comment): self
     {
         $this->comment = $comment;
+
+        return $this;
+    }
+    public function getUserFullName(): ?string
+    {
+        return $this->userFullName;
+    }
+
+    public function setUserFullName(?string $userFullName): self
+    {
+        $this->userFullName = $userFullName;
 
         return $this;
     }
