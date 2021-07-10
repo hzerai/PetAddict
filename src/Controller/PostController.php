@@ -41,7 +41,9 @@ class PostController extends AbstractFOSRestController
         $data = json_decode($request->getContent(), true);
 
         $post = $this->postDto(new Post(), $data);
-        $post->setCreatedBy($this->getUser()->getEmail());
+        $user=$this->getUser();
+        $post->setCreatedBy($user->getEmail());
+        $post->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $entityManager->persist($post);
         $entityManager->flush();
         return new Response($this->handleCircularReference($post), Response::HTTP_CREATED);
@@ -142,7 +144,9 @@ class PostController extends AbstractFOSRestController
         $body=$data["body"];
         $comment=new Comment(); 
         $comment->setBody($body);
-        $comment->setCreatedBy($this->getUser()->getEmail());
+        $user=$this->getUser();
+        $comment->setCreatedBy($user->getEmail());
+        $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $post= $this->postRepository->find($id);
         $post->addComment($comment);
         if ($post == null) {
@@ -161,7 +165,10 @@ class PostController extends AbstractFOSRestController
         $body=$data["body"];
         $commentreply=new Comment(); 
         $commentreply->setBody($body);
-        $commentreply->setCreatedBy($this->getUser()->getEmail());
+        $user=$this->getUser();
+        $commentreply->setCreatedBy($user->getEmail());
+        $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
+
         $comment= $this->commentRepository->find($commentid);
         $comment->addComment($commentreply);
         $this->entityManager->persist($comment);

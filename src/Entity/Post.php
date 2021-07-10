@@ -25,9 +25,13 @@ class Post
     private $title;
 
     /**
-     * @ORM\Column(type="string", length=255, nullable=true)
+     * @ORM\Column(type="text",  nullable=false)
      */
     private $body;
+   /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $userFullName;
 
     /**
      * @ORM\Column(type="datetime", nullable=true)
@@ -84,6 +88,17 @@ class Post
     public function setBody(?string $body): self
     {
         $this->body = $body;
+
+        return $this;
+    }
+    public function getUserFullName(): ?string
+    {
+        return $this->userFullName;
+    }
+
+    public function setUserFullName(?string $userFullName): self
+    {
+        $this->userFullName = $userFullName;
 
         return $this;
     }
