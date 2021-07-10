@@ -33,7 +33,7 @@ class AdoptionRepository extends ServiceEntityRepository
         $query =  $this->createQueryBuilder('a');
 
         if (count($criteria) > 0) {
-            if (isset($criteria['espece']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
+            if (isset($criteria['espece']) || isset($criteria['age']) || isset($criteria['couleur']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
                 $query->innerJoin(
                     Animal::class,
                     'b',
@@ -43,6 +43,25 @@ class AdoptionRepository extends ServiceEntityRepository
                 if (isset($criteria['espece'])) {
                     $query->andWhere('b.espece = :espece')
                         ->setParameter('espece', $criteria['espece']);
+                }
+                if (isset($criteria['couleur'])) {
+                    $query->andWhere('b.couleur = :couleur')
+                        ->setParameter('couleur', $criteria['couleur']);
+                }
+                if (isset($criteria['age'])) {
+                    if ($criteria['age'] == 'Senior') {
+                        $query->andWhere('b.age >= :age')
+                            ->setParameter('age', 4);
+                    } else if ($criteria['age'] == 'Bébé') {
+                        $query->andWhere('b.age = :age')
+                            ->setParameter('age', 1);
+                    } else if ($criteria['age'] == 'Junior') {
+                        $query->andWhere('b.age = :age')
+                            ->setParameter('age', 2);
+                    } else if ($criteria['age'] == 'Adulte') {
+                        $query->andWhere('b.age = :age')
+                            ->setParameter('age', 3);
+                    }
                 }
                 if (isset($criteria['type'])) {
                     $query->andWhere('b.type = :type')
@@ -166,16 +185,35 @@ class AdoptionRepository extends ServiceEntityRepository
         $query =  $this->createQueryBuilder('a');
 
         if (count($criteria) > 0) {
-            if (isset($criteria['espece']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
+            if (isset($criteria['espece']) || isset($criteria['age']) || isset($criteria['couleur']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
                 $query->innerJoin(
                     Animal::class,
                     'b',
                     'WITH',
-                    'b.id = a.animalId'
+                    'b.id = a.animal'
                 );
                 if (isset($criteria['espece'])) {
                     $query->andWhere('b.espece = :espece')
                         ->setParameter('espece', $criteria['espece']);
+                }
+                if (isset($criteria['couleur'])) {
+                    $query->andWhere('b.couleur = :couleur')
+                        ->setParameter('couleur', $criteria['couleur']);
+                }
+                if (isset($criteria['age'])) {
+                    if ($criteria['age'] == 'Senior') {
+                        $query->andWhere('b.age >= :age')
+                            ->setParameter('age', 4);
+                    } else if ($criteria['age'] == 'Bébé') {
+                        $query->andWhere('b.age = :age')
+                            ->setParameter('age', 1);
+                    } else if ($criteria['age'] == 'Junior') {
+                        $query->andWhere('b.age = :age')
+                            ->setParameter('age', 2);
+                    } else if ($criteria['age'] == 'Adulte') {
+                        $query->andWhere('b.age = :age')
+                            ->setParameter('age', 3);
+                    }
                 }
                 if (isset($criteria['type'])) {
                     $query->andWhere('b.type = :type')
@@ -234,6 +272,19 @@ class AdoptionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+
+    public function coupdecoeur(): ?Adoption
+    {
+        $count = $this->count([]);
+        $offset = random_int(0, $count - 1);
+        return $this->createQueryBuilder('a')
+            ->getQuery()
+            ->setFirstResult($offset)
+            ->setMaxResults(1)
+            ->getOneOrNullResult();
+    }
+
 
     /*
     public function findOneBySomeField($value): ?Adoption

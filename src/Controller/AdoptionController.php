@@ -73,6 +73,8 @@ class AdoptionController extends AbstractFOSRestController
 
         $espece = $requst->query->get('espece');
         $type = $requst->query->get('type');
+        $age = $requst->query->get('age');
+        $couleur = $requst->query->get('couleur');
         $ville = $requst->query->get('ville');
         $municipality = $requst->query->get('municipality');
         $taille = $requst->query->get('taille');
@@ -82,10 +84,11 @@ class AdoptionController extends AbstractFOSRestController
 
         if (
             isset($espece) && strlen($espece) > 0 || isset($type) && strlen($type) > 0 ||
+            isset($age) && strlen($age) > 0 || isset($couleur) && strlen($couleur) > 0 ||
             isset($taille) && strlen($taille) > 0 || isset($sexe) && strlen($sexe) > 0 ||
             isset($ville) && strlen($ville) > 0 || isset($municipality) && strlen($municipality) > 0 || isset($user_id) && strlen($user_id) > 0
         ) {
-            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id);
+            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id, $age, $couleur);
             $page = isset($page) && $page > 0 ? $page : 1;
             $offset = isset($size) ? ($page - 1) * $size : ($page - 1) * 8;
             $criteria['page'] = $page;
@@ -177,6 +180,8 @@ class AdoptionController extends AbstractFOSRestController
         $espece = $requst->query->get('espece');
         $type = $requst->query->get('type');
         $ville = $requst->query->get('ville');
+        $age = $requst->query->get('age');
+        $couleur = $requst->query->get('couleur');
         $municipality = $requst->query->get('municipality');
         $taille = $requst->query->get('taille');
         $sexe = $requst->query->get('sexe');
@@ -184,10 +189,11 @@ class AdoptionController extends AbstractFOSRestController
 
         if (
             isset($espece) && strlen($espece) > 0 || isset($type) && strlen($type) > 0 ||
+            isset($age) && strlen($age) > 0 || isset($couleur) && strlen($couleur) > 0 ||
             isset($taille) && strlen($taille) > 0 || isset($sexe) && strlen($sexe) > 0 ||
             isset($ville) && strlen($ville) > 0 || isset($municipality) && strlen($municipality) > 0 || isset($user_id) && strlen($user_id) > 0
         ) {
-            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id);
+            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id, $age, $couleur);
             $size = $this->adoptionRepository->countFiltered($criteria);
             return $this->json($size, Response::HTTP_OK);
         }
@@ -227,6 +233,15 @@ class AdoptionController extends AbstractFOSRestController
         return new Response($this->handleCircularReference($adoption), Response::HTTP_OK);
     }
 
+
+    /**
+     * @Route("/api/adoptioncoupdecoeur/", name="coupdecoeur" , methods = "GET")
+     */
+    public function coupdecoeur(): Response
+    {
+        $adoption = $this->adoptionRepository->coupdecoeur();
+        return new Response($this->handleCircularReference($adoption), Response::HTTP_OK);
+    }
 
     /**
      * @Route("/api/adoptions/elasticsearch", name="elastic_search_adoption" , methods = "GET")
@@ -336,7 +351,7 @@ class AdoptionController extends AbstractFOSRestController
         return $animal;
     }
 
-    private function createCriteria($espece = null, $type = null, $taille = null, $sexe = null, $ville = null, $municipality = null, $user_id = null): array
+    private function createCriteria($espece = null, $type = null, $taille = null, $sexe = null, $ville = null, $municipality = null, $user_id = null, $age, $couleur): array
     {
 
         $criteria = [];
@@ -345,6 +360,12 @@ class AdoptionController extends AbstractFOSRestController
         }
         if (isset($type) && strlen($type) > 0) {
             $criteria['type'] = $type;
+        }
+        if (isset($age) && strlen($age) > 0) {
+            $criteria['age'] = $age;
+        }
+        if (isset($couleur) && strlen($couleur) > 0) {
+            $criteria['couleur'] = $couleur;
         }
         if (isset($taille) && strlen($taille) > 0) {
             $criteria['taille'] = $taille;
