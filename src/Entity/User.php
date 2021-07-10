@@ -110,7 +110,7 @@ class User implements UserInterface
     private $recievedAdoptionRequests;
 
     /**
-     * @ORM\Column(type="integer")
+     * @ORM\Column(type="integer", nullable=true)
      */
     private $addressId;
 
@@ -121,6 +121,11 @@ class User implements UserInterface
      * @ORM\Column(type="string", length=255, nullable=true)
      */
     private $sexe;
+
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    private $status = true;
 
     public function __construct()
     {
@@ -496,5 +501,17 @@ class User implements UserInterface
     {
         $this->updatedAt = new DateTime();
         $this->updatedBy = $this->email;
+    }
+
+    public function getStatus(): ?bool
+    {
+        return $this->status;
+    }
+
+    public function setStatus(bool $status): self
+    {
+        $this->status = $status;
+
+        return $this;
     }
 }

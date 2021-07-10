@@ -110,10 +110,19 @@ class UserController extends AbstractController
     /**
      * @Route("", name="get_all_users" , methods = "GET")
      */
-    public function findAll(): Response
+    public function findAll(Request $requst): Response
     {
-        $users = $this->userRepository->findAll();
-        return new Response($this->handleCircularReference($users), Response::HTTP_OK);
+        $page = $requst->query->get('page');
+        $size = $requst->query->get('size');
+        if (!isset($page) && !isset($size)) {
+            $users = $this->userRepository->findAll();
+            return new Response($this->handleCircularReference($users), Response::HTTP_OK);
+        }
+        $page = isset($page) && $page > 0 ? $page : 1;
+        $offset = isset($size) ? ($page - 1) * $size : ($page - 1) * 8;
+        $user = $this->userRepository->findPaged($offset, isset($size) ? $size :  8);
+        return new Response($this->handleCircularReference($user), Response::HTTP_OK);
+
     }
 
     /**
@@ -262,6 +271,9 @@ class UserController extends AbstractController
     {
         $user->setEmail($data['email']);
         $user->eraseCredentials();
+        if (isset($data['roles'])) {
+            $user->setRoles($data['roles']);
+        }
         if (isset($data['firstName'])) {
             $user->setFirstName($data['firstName']);
         }
@@ -326,4 +338,34 @@ class UserController extends AbstractController
         ]);
         return $jsonObject;
     }
+
+    /**
+     * @Route("count", name="count_user" , methods = "GET")
+     */
+    public function count(): Response
+    {
+        $size = $this->userRepository->count([]);
+        return $this->json($size, Response::HTTP_OK);
+    }
+
+     /**
+     * @Route("status/{id}", name="staus_user" , methods = "PUT")
+     */
+    public function status($id): Response
+    {
+        $user = $this->userRepository->find($id);
+        if ($user->getStatus() == true) {
+            $user->setStatus(false);
+        }
+        else{
+            $user->setStatus(true);
+        }
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        return new Response($this->handleCircularReference($user), Response::HTTP_OK);
+    }
+
+
+
+
 }
