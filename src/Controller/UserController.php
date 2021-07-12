@@ -452,7 +452,6 @@ class UserController extends AbstractController
         if (isset($data['favoriteAnimal'])) {
             $user->setFavoriteAnimal($data['favoriteAnimal']);
         }
-        $user->setStatus(false);
         return $user;
     }
 
