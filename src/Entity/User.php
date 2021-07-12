@@ -127,6 +127,11 @@ class User implements UserInterface
      */
     private $status = true;
 
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    private $emailVerified = false;
+
     public function __construct()
     {
     }
@@ -511,6 +516,18 @@ class User implements UserInterface
     public function setStatus(bool $status): self
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getEmailVerified(): ?bool
+    {
+        return $this->emailVerified;
+    }
+
+    public function setEmailVerified(bool $emailVerified): self
+    {
+        $this->emailVerified = $emailVerified;
 
         return $this;
     }

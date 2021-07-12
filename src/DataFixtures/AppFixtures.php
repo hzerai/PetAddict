@@ -40,6 +40,7 @@ class AppFixtures extends Fixture
             $user->setBirthDate(
                 $generator->dateTimeBetween('1950-01-01', '2012-12-31')
             );
+            $user->setEmailVerified(true);
             $adoption = new Adoption();
             $adoption->setTitle($generator->sentence($nbWords = 6, $variableNbWords = true));
             $adoption->setDescription($generator->text);

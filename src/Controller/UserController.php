@@ -11,6 +11,7 @@ use App\Repository\AdoptionRepository;
 use App\Repository\AdoptionRequestRepository;
 use App\Repository\UserRepository;
 use DateTime;
+use DateInterval;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,16 +20,23 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Component\Mailer\MailerInterface;
+use SymfonyCasts\Bundle\VerifyEmail\VerifyEmailHelperInterface;
+use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 
 //cache
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Validator\Constraints\Collection;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
-/**
- *@Route("/api/users/")
- */
+
+
 class UserController extends AbstractController
 {
     private $userRepository;
@@ -38,9 +46,13 @@ class UserController extends AbstractController
     private $addressRepository;
     private $adoptionRepo;
     private $adoptionRequestRepo;
+    private $verifyEmailHelper;
+    private $mailer;
 
 
     public function __construct(
+        VerifyEmailHelperInterface $helper, 
+        MailerInterface $mailer,
         AddressRepository $addressRepository,
         UserRepository $repository,
         AdoptionRepository $adoptionRepo,
@@ -56,11 +68,70 @@ class UserController extends AbstractController
         $this->serializer = $serializer;
         $this->adoptionRepo = $adoptionRepo;
         $this->adoptionRequestRepo = $adoptionRequestRepo;
+        $this->verifyEmailHelper = $helper;
+        $this->mailer = $mailer;
     }
 
+    /**
+     * @Route("/api/users/status/{id}",name="staus_user",methods="PUT")
+     */
+    public function status($id): Response
+    {
+        $user = $this->userRepository->find($id);
+        if ($user->getStatus() == true) {
+            $user->setStatus(false);
+        }
+        else{
+            $user->setStatus(true);
+        }
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        return new Response($this->handleCircularReference($user), Response::HTTP_OK);
+    }
 
     /**
-     * @Route("{id}", name="get_user" , methods = "GET")
+     * @Route("/api/login", name="login_user" , methods = "POST")
+     */
+    public function getTokenUser(Request $request,JWTTokenManagerInterface $JWTManager,RefreshTokenManagerInterface $refreshTokenManager)
+    {
+        // ...
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['email']) || !isset($data['password'])) {
+            return $this->json("email or password is missing", Response::HTTP_FORBIDDEN);
+        }
+        $user = $this->userRepository->findOneByEmail($data['email']);
+        if(!isset($user) || !$this->passwordEncoder->isPasswordValid($user,$data['password'])){
+            return $this->json("Invalid credentials", Response::HTTP_UNAUTHORIZED);
+        }
+        if(!$user->getStatus()){
+            return $this->json("your account is deactivated", Response::HTTP_UNAUTHORIZED);
+        }
+        if(!$user->getEmailVerified()){
+            return $this->json("please verify your email", Response::HTTP_UNAUTHORIZED);
+        }
+        $valid = new DateTime('now');
+        $valid->add(new DateInterval('P3D'));
+        $refreshToken = $refreshTokenManager->create();
+        $refreshToken->setUsername($user->getEmail());
+        $refreshToken->setRefreshToken();
+        $refreshToken->setValid($valid);
+
+        $refreshTokenManager->save($refreshToken);
+            return new JsonResponse(['token' => $JWTManager->create($user),'refreshToken' =>$refreshToken->getRefreshToken()]);
+        //return new JsonResponse(['token' => $JWTManager->create($user)]);
+    }
+
+    /**
+     * @Route("/api/users/count", name="count_user" , methods = "GET")
+     */
+    public function count(): Response
+    {
+        $size = $this->userRepository->count([]);
+        return $this->json($size, Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/users/{id}", name="get_user" , methods = "GET")
      */
     public function findOne($id, Request $requst): Response
     {
@@ -108,7 +179,7 @@ class UserController extends AbstractController
 
 
     /**
-     * @Route("", name="get_all_users" , methods = "GET")
+     * @Route("/api/users", name="get_all_users" , methods = "GET")
      */
     public function findAll(Request $requst): Response
     {
@@ -126,7 +197,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("addresses/find/all", name="get_all_addresses" , methods = "GET")
+     * @Route("/api/users/addresses/find/all", name="get_all_addresses" , methods = "GET")
      */
     public function findAllAdresses(): Response
     {
@@ -135,7 +206,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("addresses/{id}", name="get_one_address" , methods = "GET")
+     * @Route("/api/users/addresses/{id}", name="get_one_address" , methods = "GET")
      */
     public function findOneAdress($id): Response
     {
@@ -150,7 +221,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("user_by_email/{email}", name="get_user_by_email" , methods = "GET")
+     * @Route("/api/users/user_by_email/{email}", name="get_user_by_email" , methods = "GET")
      */
     public function findByEmail($email, Request $requst): Response
     {
@@ -198,7 +269,7 @@ class UserController extends AbstractController
 
 
     /**
-     * @Route("{id}", name="delete_user" , methods = "DELETE")
+     * @Route("/api/users/{id}", name="delete_user" , methods = "DELETE")
      */
     public function delete($id): Response
     {
@@ -214,7 +285,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("{id}", name="update_user" , methods = "PUT")
+     * @Route("/api/users/{id}", name="update_user" , methods = "PUT")
      */
     public function update($id, Request $request): Response
     {
@@ -244,7 +315,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("", name="create_user" , methods = "POST")
+     * @Route("/api/users", name="create_user" , methods = "POST")
      */
     public function create(Request $request): Response
     {
@@ -263,6 +334,81 @@ class UserController extends AbstractController
         $this->entityManager->flush();
         $user->setPassword("********");
         return new Response($this->handleCircularReference($user), Response::HTTP_CREATED);
+    }
+
+    /**
+     * @Route("/api/users/register", name="register-user", methods = "POST")
+     */
+    public function register(Request $request): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['email']) || !isset($data['password'])) {
+            return $this->json("email or password is missing", Response::HTTP_FORBIDDEN);
+        }
+        $user = $this->UserDto(new User(), $data);
+        $user->setPassword(
+            $this->passwordEncoder->encodePassword(
+                $user,
+                $data['password']
+            )
+        );
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $user->setPassword("********");
+    
+        $signatureComponents = $this->verifyEmailHelper->generateSignature(
+                'registration_confirmation_route',
+                $user->getId(),
+                $user->getEmail(),
+               ['id' => $user->getId()]
+            );
+        $email = new TemplatedEmail();
+        $email->from("petaddictpi@gmail.com");
+        $email->to($user->getEmail());
+        $email->htmlTemplate('confirmation_email.html.twig');
+        $email->context(['signedUrl' => $signatureComponents->getSignedUrl(),'userid'=>$user->getId(),'useremail'=>$user->getEmail()]);
+        
+        $this->mailer->send($email);
+        return new Response($this->handleCircularReference($user), Response::HTTP_CREATED);
+
+        // generate and return a response for the browser
+    }
+
+    
+    /**
+     * @Route("/api/users/verify", name="registration_confirmation_route")
+     */
+    public function verifyUserEmail(Request $request): Response
+    {
+        $id = $request->get('id');
+        // Verify the user id exists and is not null
+       if (null === $id) {
+            return $this->json("No id Found", Response::HTTP_FORBIDDEN);
+        }
+        $user = $this->userRepository->find($id);
+        // Ensure the user exists in persistence
+        if (null === $user) {
+            return $this->json("No User Found ", Response::HTTP_FORBIDDEN);
+        }
+
+        // Do not get the User's Id or Email Address from the Request object
+        try {
+            $this->verifyEmailHelper->validateEmailConfirmation($request->getUri(), $user->getId(), $user->getEmail());
+        }
+        catch (VerifyEmailExceptionInterface $e) {
+            $this->addFlash('verify_email_error', $e->getReason());
+
+            return $this->json("verification failed", Response::HTTP_FORBIDDEN);
+        }
+        
+
+        // Mark your user as verified. e.g. switch a User::verified property to true
+        $user->setEmailVerified(true);
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $this->addFlash('success', 'Your e-mail address has been verified.');
+
+        return new Response("Your e-mail address has been verified", Response::HTTP_OK);
     }
 
 
@@ -306,6 +452,7 @@ class UserController extends AbstractController
         if (isset($data['favoriteAnimal'])) {
             $user->setFavoriteAnimal($data['favoriteAnimal']);
         }
+        $user->setStatus(false);
         return $user;
     }
 
@@ -339,31 +486,9 @@ class UserController extends AbstractController
         return $jsonObject;
     }
 
-    /**
-     * @Route("count", name="count_user" , methods = "GET")
-     */
-    public function count(): Response
-    {
-        $size = $this->userRepository->count([]);
-        return $this->json($size, Response::HTTP_OK);
-    }
+    
 
-     /**
-     * @Route("status/{id}", name="staus_user" , methods = "PUT")
-     */
-    public function status($id): Response
-    {
-        $user = $this->userRepository->find($id);
-        if ($user->getStatus() == true) {
-            $user->setStatus(false);
-        }
-        else{
-            $user->setStatus(true);
-        }
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
-        return new Response($this->handleCircularReference($user), Response::HTTP_OK);
-    }
+     
 
 
 
