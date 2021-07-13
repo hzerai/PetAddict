@@ -37,6 +37,7 @@ security:
     access_control:
         - { path: ^/api/docs, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/api/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/api/verify, roles: IS_AUTHENTICATED_ANONYMOUSLY,methods: [POST]}
         - { path: ^/api/token/refresh, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/api/users, roles: IS_AUTHENTICATED_ANONYMOUSLY,methods: [POST]}
         - { path: ^/api/users/register, roles: IS_AUTHENTICATED_ANONYMOUSLY,methods: [POST]}

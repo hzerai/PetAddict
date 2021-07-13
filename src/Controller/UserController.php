@@ -337,7 +337,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("/api/users/register", name="register-user", methods = "POST")
+     * @Route("/api/register", name="register-user", methods = "POST")
      */
     public function register(Request $request): Response
     {
@@ -364,9 +364,10 @@ class UserController extends AbstractController
             );
         $email = new TemplatedEmail();
         $email->from("petaddictpi@gmail.com");
+        $email->subject('Pet Addict Email Verification!');
         $email->to($user->getEmail());
         $email->htmlTemplate('confirmation_email.html.twig');
-        $email->context(['signedUrl' => $signatureComponents->getSignedUrl(),'userid'=>$user->getId(),'useremail'=>$user->getEmail()]);
+        $email->context(['symfonyurl' =>$signatureComponents->getSignedUrl(),'signedUrl' => str_replace("http://localhost:8000/api/verify","http://localhost:4200/valider",$signatureComponents->getSignedUrl()),'userid'=>$user->getId(),'useremail'=>$user->getEmail()]);
         
         $this->mailer->send($email);
         return new Response($this->handleCircularReference($user), Response::HTTP_CREATED);
@@ -376,7 +377,7 @@ class UserController extends AbstractController
 
     
     /**
-     * @Route("/api/users/verify", name="registration_confirmation_route")
+     * @Route("/api/verify", name="registration_confirmation_route")
      */
     public function verifyUserEmail(Request $request): Response
     {
@@ -393,22 +394,20 @@ class UserController extends AbstractController
 
         // Do not get the User's Id or Email Address from the Request object
         try {
-            $this->verifyEmailHelper->validateEmailConfirmation($request->getUri(), $user->getId(), $user->getEmail());
+            $this->verifyEmailHelper->validateEmailConfirmation(str_replace("%25","%",$request->getUri()), $user->getId(), $user->getEmail());
         }
         catch (VerifyEmailExceptionInterface $e) {
             $this->addFlash('verify_email_error', $e->getReason());
 
-            return $this->json("verification failed", Response::HTTP_FORBIDDEN);
+            return $this->json($e->getReason(), Response::HTTP_FORBIDDEN);
         }
-        
-
         // Mark your user as verified. e.g. switch a User::verified property to true
         $user->setEmailVerified(true);
         $this->entityManager->persist($user);
         $this->entityManager->flush();
         $this->addFlash('success', 'Your e-mail address has been verified.');
 
-        return new Response("Your e-mail address has been verified", Response::HTTP_OK);
+        return new Response($this->handleCircularReference("Your e-mail address has been verified"), Response::HTTP_OK);
     }
 
 
