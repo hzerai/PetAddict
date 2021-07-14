@@ -184,7 +184,7 @@ class LostController extends AbstractFOSRestController
     /**
      * @Route("/api/lost/{id}/addcommentlost", name="addcommentlost" , methods = "POST")
      */
-    public function addComment($id,Request $request): Response
+    public function addCommentlost($id,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -194,7 +194,7 @@ class LostController extends AbstractFOSRestController
         $comment->setCreatedBy($user->getEmail());
         $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $lost= $this->LostRepository->find($id);
-        $lost->addComment($comment);
+        $lost->addCommentlost($comment);
         if ($lost == null) {
             return new Response('This post was not found', Response::HTTP_NOT_FOUND);
         }
@@ -205,7 +205,7 @@ class LostController extends AbstractFOSRestController
       /**
      * @Route("/api/lost/{id}/addcommentlost/{commentid}/replylost", name="replylost" , methods = "POST")
      */
-    public function addReply($id,$commentid ,Request $request): Response
+    public function addReplylost($id,$commentid ,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -216,7 +216,7 @@ class LostController extends AbstractFOSRestController
         $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
 
         $comment= $this->commentRepository->find($commentid);
-        $comment->addComment($commentreply);
+        $comment->addCommentlost($commentreply);
         $this->entityManager->persist($comment);
         $this->entityManager->flush();
         $lost= $this->LostRepository->find($id);

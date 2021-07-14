@@ -186,7 +186,7 @@ class FoundController extends AbstractFOSRestController
     /**
      * @Route("/api/found/{id}/addcommentfound", name="addcommentfound" , methods = "POST")
      */
-    public function addComment($id,Request $request): Response
+    public function addCommentfound($id,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -196,7 +196,7 @@ class FoundController extends AbstractFOSRestController
         $comment->setCreatedBy($user->getEmail());
         $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $found= $this->FoundRepository->find($id);
-        $found->addComment($comment);
+        $found->addCommentfound($comment);
         if ($found == null) {
             return new Response('This post was not found', Response::HTTP_NOT_FOUND);
         }
@@ -207,7 +207,7 @@ class FoundController extends AbstractFOSRestController
       /**
      * @Route("/api/found/{id}/addcommentfound/{commentid}/replyfound", name="replyfound" , methods = "POST")
      */
-    public function addReply($id,$commentid ,Request $request): Response
+    public function addReplyfound($id,$commentid ,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -218,7 +218,7 @@ class FoundController extends AbstractFOSRestController
         $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
 
         $comment= $this->commentRepository->find($commentid);
-        $comment->addComment($commentreply);
+        $comment->addCommentfound($commentreply);
         $this->entityManager->persist($comment);
         $this->entityManager->flush();
         $found= $this->FoundRepository->find($id);

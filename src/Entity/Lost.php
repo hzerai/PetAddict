@@ -23,7 +23,7 @@ class Lost
 
     private $user;
     /**
-     * @ORM\Column(type="text",  nullable=false)
+     * @ORM\Column(type="text",  nullable=true)
      */
     private $body;
      /**
