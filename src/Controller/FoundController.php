@@ -18,13 +18,15 @@ use App\Repository\UserRepository;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\Cache\ItemInterface;
-
+use App\Repository\CommentRepository;
+use App\Entity\Comment;
 
 use Symfony\Component\Serializer\SerializerInterface;
 
 class FoundController extends AbstractFOSRestController
 {
 
+    private $commentRepository;
     private $FoundRepository;
     private $entityManager;
     private $serializer;
@@ -32,8 +34,9 @@ class FoundController extends AbstractFOSRestController
     private $userRepo;
 
 
-    public function __construct(FoundRepository $repository, EntityManagerInterface $em, SerializerInterface $serializer, AnimalRepository $animalRepo,  UserRepository $userRepo )
+    public function __construct(FoundRepository $repository, EntityManagerInterface $em, SerializerInterface $serializer, AnimalRepository $animalRepo,  UserRepository $userRepo , CommentRepository $commentRepository)
     {
+        $this->commentRepository=$commentRepository;
         $this->FoundRepository = $repository;
         $this->entityManager = $em;
         $this->serializer = $serializer;
@@ -138,6 +141,9 @@ class FoundController extends AbstractFOSRestController
         if (isset($data['description'])) {
             $found->setDescription($data['description']);
         }
+        if (isset($data['body'])){
+            $found->setBody($data['body']);
+            }
         if (isset($data['animal'])) {
             $animal = $found->getAnimal();
             if ($animal == null) {
@@ -175,6 +181,48 @@ class FoundController extends AbstractFOSRestController
             }
         ]);
         return $jsonObject;
+    }
+
+    /**
+     * @Route("/api/found/{id}/addcommentfound", name="addcommentfound" , methods = "POST")
+     */
+    public function addComment($id,Request $request): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        $body=$data["body"];
+        $comment=new Comment(); 
+        $comment->setBody($body);
+        $user=$this->getUser();
+        $comment->setCreatedBy($user->getEmail());
+        $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
+        $found= $this->FoundRepository->find($id);
+        $found->addComment($comment);
+        if ($found == null) {
+            return new Response('This post was not found', Response::HTTP_NOT_FOUND);
+        }
+        $this->entityManager->persist($found);
+        $this->entityManager->flush();
+        return new Response($this->handleCircularReference($found), Response::HTTP_OK);
+    }
+      /**
+     * @Route("/api/found/{id}/addcommentfound/{commentid}/replyfound", name="replyfound" , methods = "POST")
+     */
+    public function addReply($id,$commentid ,Request $request): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        $body=$data["body"];
+        $commentreply=new Comment(); 
+        $commentreply->setBody($body);
+        $user=$this->getUser();
+        $commentreply->setCreatedBy($user->getEmail());
+        $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
+
+        $comment= $this->commentRepository->find($commentid);
+        $comment->addComment($commentreply);
+        $this->entityManager->persist($comment);
+        $this->entityManager->flush();
+        $found= $this->FoundRepository->find($id);
+        return new Response($this->handleCircularReference($found), Response::HTTP_OK);
     }
 
 }

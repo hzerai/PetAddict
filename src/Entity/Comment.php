@@ -63,6 +63,16 @@ class Comment
      */
     private $userFullName;
 
+    /**
+     * @ORM\ManyToOne(targetEntity=Lost::class, inversedBy="comments")
+     */
+    private $lost;
+
+    /**
+     * @ORM\ManyToOne(targetEntity=Found::class, inversedBy="comments")
+     */
+    private $found;
+
     public function __construct()
     {
         $this->comments = new ArrayCollection();
@@ -205,6 +215,30 @@ class Comment
                 $comment->setComment(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getLost(): ?Lost
+    {
+        return $this->lost;
+    }
+
+    public function setLost(?Lost $lost): self
+    {
+        $this->lost = $lost;
+
+        return $this;
+    }
+
+    public function getFound(): ?Found
+    {
+        return $this->found;
+    }
+
+    public function setFound(?Found $found): self
+    {
+        $this->found = $found;
 
         return $this;
     }
