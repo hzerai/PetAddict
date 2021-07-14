@@ -24,8 +24,14 @@ class AdoptionRequest
      */
     private $status = "CREATED";
 
-   
+
     private $user;
+
+
+    /**
+     * @ORM\Column(type="boolean", nullable=true)
+     */
+    private $hasTestamony  = false;
 
     /**
      * @ORM\Column(type="datetime", nullable=true)
@@ -47,15 +53,15 @@ class AdoptionRequest
      */
     private $updatedBy;
 
-   
+
     private $adoption;
 
-     /**
+    /**
      * @ORM\Column(type="integer")
      */
     private $userId;
 
-     /**
+    /**
      * @ORM\Column(type="integer")
      */
     private $adoptionId;
@@ -73,6 +79,18 @@ class AdoptionRequest
     public function setStatus(string $status): self
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getHasTestamony(): ?bool
+    {
+        return $this->hasTestamony;
+    }
+
+    public function setHasTestamony(bool $hasTestamony): self
+    {
+        $this->hasTestamony = $hasTestamony;
 
         return $this;
     }

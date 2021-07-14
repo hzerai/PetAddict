@@ -44,16 +44,19 @@ class AppFixtures extends Fixture
             );
             $user->setEmailVerified(true);
             $address = new Address();
-            $address->setVille($villes[$i % 23]->name);
-            $address->setMunicipality($villes[$i % 23]->municipalities[$i % 5]->name);
+            $address->setVille($villes[$i % 22]->name);
+            $address->setMunicipality($villes[$i % 23]->municipalities[$i % 4]->name);
+            $address->setCreatedBy($user->getEmail());
 
             $adoption = new Adoption();
+            $adoption->setCreatedBy($user->getEmail());
             $adoption->setTitle($generator->sentence($nbWords = 6, $variableNbWords = true));
             $adoption->setDescription($generator->text);
             $animal = new Animal();
             $animal->setSexe($i % 2 == 0 ? 'femenin' : 'masculin');
             $animal->setType($generator->word);
             $animal->setNom($generator->firstName);
+            $animal->setCreatedBy($user->getEmail());
 
             if ($i % 10 < 2) {
                 $animal->setAge('Bébé');
@@ -87,10 +90,12 @@ class AppFixtures extends Fixture
             }
 
             if ($i % 5 == 0) {
+                $adoption->setUrgent(true);
                 $animal->setEspece(Animals::FISH);
                 $animal->setTaille('Très petite');
                 $user->setFavoriteAnimal(Animals::FISH);
             } else if ($i % 4 == 0) {
+                $adoption->setStatus('ADOPTED');
                 $animal->setEspece(Animals::BIRD);
                 $animal->setTaille('Très Grande');
                 $user->setFavoriteAnimal(Animals::BIRD);
@@ -145,7 +150,7 @@ class AppFixtures extends Fixture
             $adoption->setAnimal($animal);
             $manager->persist($address);
             $manager->flush();
-            $user->setAddress($address);
+            $user->setAddressId($address->getId());
             $manager->persist($user);
             $manager->flush();
             $adoption->setUserId($user->getId());

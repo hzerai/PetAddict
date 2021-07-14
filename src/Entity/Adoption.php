@@ -68,6 +68,17 @@ class Adoption
      */
     private $animal;
 
+
+    /**
+     * @ORM\Column(type="boolean", nullable=true)
+     */
+    private $urgent = false;
+
+    /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $status = 'CREATED';
+
     public function __construct()
     {
     }
@@ -110,6 +121,31 @@ class Adoption
     public function setDescription(?string $description): self
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(?string $status): self
+    {
+        $this->status = $status;
+
+        return $this;
+    }
+
+    public function getUrgent(): ?bool
+    {
+        return $this->urgent;
+    }
+
+    public function setUrgent(?bool $urgent): self
+    {
+        $this->urgent = $urgent;
 
         return $this;
     }
