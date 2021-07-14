@@ -411,6 +411,117 @@ class UserController extends AbstractController
     }
 
 
+    /**
+     * @Route("/api/forgetMdp", name="forget-password-user", methods = "POST")
+     */
+    public function forgetMdp(Request $request): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['email'])) {
+            return $this->json("email is missing", Response::HTTP_FORBIDDEN);
+        }
+        $user = $this->userRepository->findOneBy(array('email' => $data['email']));
+        if(!isset($user)){
+            return $this->json("you don't have an account", Response::HTTP_FORBIDDEN);
+        }
+        $signatureComponents = $this->verifyEmailHelper->generateSignature(
+                'forget_confirmation_route',
+                $user->getId(),
+                $user->getEmail(),
+               ['id' => $user->getId()]
+            );
+        $email = new TemplatedEmail();
+        $email->from("petaddictpi@gmail.com");
+        $email->subject('Pet Addict Email Verification!');
+        $email->to($user->getEmail());
+        $email->htmlTemplate('confirmation_email.html.twig');
+        $email->context(['symfonyurl' =>$signatureComponents->getSignedUrl(),'signedUrl' => str_replace("http://localhost:8000/api/verify","http://localhost:4200/valider",$signatureComponents->getSignedUrl()),'userid'=>$user->getId(),'useremail'=>$user->getEmail()]);
+        
+        $this->mailer->send($email);
+        return new Response($this->handleCircularReference($user), Response::HTTP_CREATED);
+
+        // generate and return a response for the browser
+    }
+
+
+    /**
+     * @Route("/api/verifyuser", name="forget_confirmation_route")
+     */
+    public function verifyUserForgetPassword(Request $request): Response
+    {
+        $id = $request->get('id');
+        // Verify the user id exists and is not null
+       if (null === $id) {
+            return $this->json("No id Found", Response::HTTP_FORBIDDEN);
+        }
+        $user = $this->userRepository->find($id);
+        // Ensure the user exists in persistence
+        if (null === $user) {
+            return $this->json("No User Found ", Response::HTTP_FORBIDDEN);
+        }
+
+        // Do not get the User's Id or Email Address from the Request object
+        try {
+            $this->verifyEmailHelper->validateEmailConfirmation(str_replace("%25","%",$request->getUri()), $user->getId(), $user->getEmail());
+        }
+        catch (VerifyEmailExceptionInterface $e) {
+            $this->addFlash('verify_email_error', $e->getReason());
+
+            return $this->json($e->getReason(), Response::HTTP_FORBIDDEN);
+        }
+        // Mark your user as verified. e.g. switch a User::verified property to true
+        $this->addFlash('success', 'You can change password.');
+        return new Response($this->handleCircularReference(true), Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/changepasswordbyemail", name="change_password_route")
+     */
+    public function changePasswordByEmail(Request $request): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['password']) || !isset($data['confirmPassword'])) {
+            return $this->json("password or confirmed password is missing", Response::HTTP_FORBIDDEN);
+        }
+        else if($data['password'] != $data['confirmPassword']){
+            return $this->json("password and confirmed password are not the same", Response::HTTP_FORBIDDEN);
+        }
+        $id = $request->get('id');
+        // Verify the user id exists and is not null
+       if (null === $id) {
+            return $this->json("No id Found", Response::HTTP_FORBIDDEN);
+        }
+        $user = $this->userRepository->find($id);
+        // Ensure the user exists in persistence
+        if (null === $user) {
+            return $this->json("No User Found ", Response::HTTP_FORBIDDEN);
+        }
+
+        // Do not get the User's Id or Email Address from the Request object
+        try {
+            $link = str_replace("changepasswordbyemail","verifyuser",str_replace("%25","%",$request->getUri()));
+            $this->verifyEmailHelper->validateEmailConfirmation($link, $user->getId(), $user->getEmail());
+        }
+        catch (VerifyEmailExceptionInterface $e) {
+            $this->addFlash('verify_email_error', $e->getReason());
+
+            return $this->json($e->getReason().str_replace("%25","%",$request->getUri()), Response::HTTP_FORBIDDEN);
+        }
+        // Mark your user as verified. e.g. switch a User::verified property to true
+        $this->addFlash('success', 'You password has been changed.');
+        $user->setPassword(
+            $this->passwordEncoder->encodePassword(
+                $user,
+                $data['password']
+            )
+        );
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $user->setPassword("********");
+        return new Response($this->handleCircularReference($user), Response::HTTP_OK);
+    }
+
+
 
     private function userDto(User $user, $data)
     {
