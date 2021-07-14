@@ -49,3 +49,6 @@ security:
         - { path: ^/api/notification, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/adoption, roles: IS_AUTHENTICATED_FULLY,methods: [POST]}
         - { path: ^/api/post, roles: IS_AUTHENTICATED_FULLY,methods: [POST]}
+        - { path: ^/api/forgetMdp, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/api/verifyuser, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+
