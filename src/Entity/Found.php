@@ -22,10 +22,6 @@ class Found
     private $id;
 
     private $user;
-    /**
-     * @ORM\Column(type="text",  nullable=true)
-     */
-    private $body;
     
     /**
      * @ORM\OneToOne(targetEntity=Address::class,  cascade={"persist", "remove"})
@@ -235,16 +231,6 @@ public function getUser(): ?User
 
         return $this;
     }
-    public function getBody(): ?string
-    {
-        return $this->body;
-    }
-
-    public function setBody(?string $body): self
-    {
-        $this->body = $body;
-
-        return $this;
-    }
+    
     
 }
