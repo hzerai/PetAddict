@@ -61,6 +61,11 @@ class Found
      * @ORM\OneToOne(targetEntity=Animal::class,  cascade={"persist", "remove"})
      */
     private $animal;
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $status = "CREATED";
+
 
     /**
      * @ORM\OneToMany(targetEntity=Comment::class, mappedBy="found",cascade={"persist", "remove"})
@@ -228,6 +233,17 @@ public function getUser(): ?User
                 $comment->setFound(null);
             }
         }
+
+        return $this;
+    }
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(string $status): self
+    {
+        $this->status = $status;
 
         return $this;
     }

@@ -26,7 +26,7 @@ class Lost
      /**
      * @ORM\Column(type="string", length=255)
      */
-    private $status = "NEW";
+    private $status = "CREATED";
 
     
     /**
