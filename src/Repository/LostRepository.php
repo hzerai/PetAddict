@@ -39,14 +39,39 @@ class LostRepository extends ServiceEntityRepository
     /**
      * @return Lost[] Returns an array of Lost objects
      */
-    public function findPaged($offset, $size)
+    public function findPaged($offset, $size, $status)
     {
-       
-        return $this->createQueryBuilder('a')
-            ->orderBy('a.id', 'DESC')
+
+        $query = $this->createQueryBuilder('a');
+        if ($status != null) {
+            $query->where('a.status = :status')
+                ->setParameter('status', $status);
+        }
+        else 
+        {
+            $query->where('a.status = :status')
+            ->setParameter('status', 'CREATED');
+        }
+        return $query->orderBy('a.id', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($size)
             ->getQuery()
             ->getResult();
+    }
+    public function count($status){
+        $query = $this->createQueryBuilder('a');
+        if ($status != null) {
+            $query->where('a.status = :status')
+                ->setParameter('status', $status);
+        }
+        else 
+        {
+            $query->where('a.status = :status')
+            ->setParameter('status', 'CREATED');
+        }
+        return $query->select('count (a.id)') 
+            ->getQuery()
+            ->getSingleScalarResult();
+
     }
 }

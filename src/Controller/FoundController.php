@@ -56,19 +56,32 @@ class FoundController extends AbstractFOSRestController
 
         $page = $requst->query->get('page');
         $size = $requst->query->get('size');  
+        $status = $requst->query->get('status');  
         $page = isset($page) && $page > 0 ? $page : 1;
         $offset = isset($size) ? ($page - 1) * $size : ($page - 1) * 8;
-        $founds = $this->FoundRepository->findPaged($offset, isset($size) ? $size :  8);
+        $founds = $this->FoundRepository->findPaged($offset, isset($size) ? $size :  8,$status);
         return new Response($this->handleCircularReference($founds), Response::HTTP_OK);
     }
+    /**
+     * @Route("/api/userfound", name="found_list_user", methods = "GET")
+     */
+    public function findAllUser(): Response
+    {
+
+        $email=$this->getUser()->getEmail();
+        $founds = $this->FoundRepository->findByCreatedBy($email);
+        return new Response($this->handleCircularReference($founds), Response::HTTP_OK);
+    }
+
 
 
     /**
      * @Route("/api/found/count", name="count_found" , methods = "GET")
      */
-    public function count(): Response
+    public function count(Request $request): Response
     {
-        $size = $this->FoundRepository->count([]);
+        $status = $request->query->get('status');  
+        $size = $this->FoundRepository->count($status);
         return $this->json($size, Response::HTTP_OK);
     }
 
@@ -141,8 +154,8 @@ class FoundController extends AbstractFOSRestController
         if (isset($data['description'])) {
             $found->setDescription($data['description']);
         }
-        if (isset($data['body'])){
-            $found->setBody($data['body']);
+        if (isset($data['status'])){
+            $found->setStatus($data['status']);
             }
         if (isset($data['animal'])) {
             $animal = $found->getAnimal();
@@ -186,7 +199,7 @@ class FoundController extends AbstractFOSRestController
     /**
      * @Route("/api/found/{id}/addcommentfound", name="addcommentfound" , methods = "POST")
      */
-    public function addCommentfound($id,Request $request): Response
+    public function addComment($id,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -196,7 +209,7 @@ class FoundController extends AbstractFOSRestController
         $comment->setCreatedBy($user->getEmail());
         $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $found= $this->FoundRepository->find($id);
-        $found->addCommentfound($comment);
+        $found->addComment($comment);
         if ($found == null) {
             return new Response('This post was not found', Response::HTTP_NOT_FOUND);
         }
@@ -207,7 +220,7 @@ class FoundController extends AbstractFOSRestController
       /**
      * @Route("/api/found/{id}/addcommentfound/{commentid}/replyfound", name="replyfound" , methods = "POST")
      */
-    public function addReplyfound($id,$commentid ,Request $request): Response
+    public function addReply($id,$commentid ,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -218,7 +231,7 @@ class FoundController extends AbstractFOSRestController
         $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
 
         $comment= $this->commentRepository->find($commentid);
-        $comment->addCommentfound($commentreply);
+        $comment->addComment($commentreply);
         $this->entityManager->persist($comment);
         $this->entityManager->flush();
         $found= $this->FoundRepository->find($id);

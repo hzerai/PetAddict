@@ -55,9 +55,21 @@ class LostController extends AbstractFOSRestController
 
         $page = $requst->query->get('page');
         $size = $requst->query->get('size');  
+        $status = $requst->query->get('status');  
         $page = isset($page) && $page > 0 ? $page : 1;
         $offset = isset($size) ? ($page - 1) * $size : ($page - 1) * 8;
-        $losts = $this->LostRepository->findPaged($offset, isset($size) ? $size :  8);
+        $losts = $this->LostRepository->findPaged($offset, isset($size) ? $size :  8, $status);
+        return new Response($this->handleCircularReference($losts), Response::HTTP_OK);
+    }
+    
+    /**
+     * @Route("/api/userlost", name="lost_list_user", methods = "GET")
+     */
+    public function findAllUser(): Response
+    {
+
+        $email=$this->getUser()->getEmail();
+        $losts = $this->LostRepository->findByCreatedBy($email);
         return new Response($this->handleCircularReference($losts), Response::HTTP_OK);
     }
 
@@ -65,9 +77,10 @@ class LostController extends AbstractFOSRestController
     /**
      * @Route("/api/lost/count", name="count_lost" , methods = "GET")
      */
-    public function count(): Response
+    public function count(Request $request): Response
     {
-        $size = $this->LostRepository->count([]);
+        $status = $request->query->get('status');  
+        $size = $this->LostRepository->count($status);
         return $this->json($size, Response::HTTP_OK);
     }
 
@@ -140,9 +153,9 @@ class LostController extends AbstractFOSRestController
         if (isset($data['description'])) {
             $lost->setDescription($data['description']);
         }
-        if (isset($data['body'])){
-            $lost->setBody($data['body']);
-            }
+        if (isset($data['status'])) {
+            $lost->setStatus($data['status']);
+        }
         if (isset($data['animal'])) {
             $animal = $lost->getAnimal();
             if ($animal == null) {
@@ -184,7 +197,7 @@ class LostController extends AbstractFOSRestController
     /**
      * @Route("/api/lost/{id}/addcommentlost", name="addcommentlost" , methods = "POST")
      */
-    public function addCommentlost($id,Request $request): Response
+    public function addComment($id,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -194,7 +207,7 @@ class LostController extends AbstractFOSRestController
         $comment->setCreatedBy($user->getEmail());
         $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $lost= $this->LostRepository->find($id);
-        $lost->addCommentlost($comment);
+        $lost->addComment($comment);
         if ($lost == null) {
             return new Response('This post was not found', Response::HTTP_NOT_FOUND);
         }
@@ -205,7 +218,7 @@ class LostController extends AbstractFOSRestController
       /**
      * @Route("/api/lost/{id}/addcommentlost/{commentid}/replylost", name="replylost" , methods = "POST")
      */
-    public function addReplylost($id,$commentid ,Request $request): Response
+    public function addReply($id,$commentid ,Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         $body=$data["body"];
@@ -216,7 +229,7 @@ class LostController extends AbstractFOSRestController
         $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
 
         $comment= $this->commentRepository->find($commentid);
-        $comment->addCommentlost($commentreply);
+        $comment->addComment($commentreply);
         $this->entityManager->persist($comment);
         $this->entityManager->flush();
         $lost= $this->LostRepository->find($id);
