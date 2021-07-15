@@ -43,6 +43,7 @@ class PostController extends AbstractFOSRestController
         $post = $this->postDto(new Post(), $data);
         $user=$this->getUser();
         $post->setCreatedBy($user->getEmail());
+        $post->setUserId($user->getId());
         $post->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $entityManager->persist($post);
         $entityManager->flush();
@@ -146,6 +147,7 @@ class PostController extends AbstractFOSRestController
         $comment->setBody($body);
         $user=$this->getUser();
         $comment->setCreatedBy($user->getEmail());
+        $comment->setUserId($user->getId());
         $comment->setUserFullName($user->getFirstName()." ".$user->getLastName());
         $post= $this->postRepository->find($id);
         $post->addComment($comment);
