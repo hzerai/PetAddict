@@ -362,12 +362,23 @@ class UserController extends AbstractController
                 $user->getEmail(),
                ['id' => $user->getId()]
             );
+            $name=$user->getFirstName();
+            if(isset($name)){
+                $lastName = $user->getLastName();
+                if(isset($lastName)){
+                    $name=$name." ".$user->getLastName();
+                }
+            }
+            else{
+                $name=explode('@',$user->getEmail());
+                $name=$name[0];
+            }
         $email = new TemplatedEmail();
         $email->from("petaddictpi@gmail.com");
         $email->subject('Pet Addict Email Verification!');
         $email->to($user->getEmail());
         $email->htmlTemplate('confirmation_email.html.twig');
-        $email->context(['symfonyurl' =>$signatureComponents->getSignedUrl(),'signedUrl' => str_replace("http://localhost:8000/api/verify","http://localhost:4200/valider",$signatureComponents->getSignedUrl()),'userid'=>$user->getId(),'useremail'=>$user->getEmail()]);
+        $email->context(['symfonyurl' =>$signatureComponents->getSignedUrl(),'signedUrl' => str_replace("http://localhost:8000/api/verify","http://localhost:4200/valider",$signatureComponents->getSignedUrl()),'name'=>$name]);
         
         $this->mailer->send($email);
         return new Response($this->handleCircularReference($user), Response::HTTP_CREATED);
@@ -430,13 +441,24 @@ class UserController extends AbstractController
                 $user->getEmail(),
                ['id' => $user->getId()]
             );
-        $email = new TemplatedEmail();
-        $email->from("petaddictpi@gmail.com");
-        $email->subject('Pet Addict Email Verification!');
-        $email->to($user->getEmail());
-        $email->htmlTemplate('confirmation_email.html.twig');
-        $email->context(['symfonyurl' =>$signatureComponents->getSignedUrl(),'signedUrl' => str_replace("http://localhost:8000/api/verify","http://localhost:4200/valider",$signatureComponents->getSignedUrl()),'userid'=>$user->getId(),'useremail'=>$user->getEmail()]);
-        
+            $name=$user->getFirstName();
+            if(isset($name)){
+                $lastName = $user->getLastName();
+                if(isset($lastName)){
+                    $name=$name." ".$user->getLastName();
+                }
+            }
+            else{
+                $name=explode('@',$user->getEmail());
+                $name=$name[0];
+            }
+            $email = new TemplatedEmail();
+            $email->from("petaddictpi@gmail.com");
+            $email->subject('Pet Addict Reset Password!');
+            $email->to($user->getEmail());
+            $email->htmlTemplate('forget_password.html.twig');
+            $email->context(['symfonyurl' =>$signatureComponents->getSignedUrl(),'signedUrl' => str_replace("http://localhost:8000/api/verify","http://localhost:4200/valider",$signatureComponents->getSignedUrl()),'name'=>$name]);
+          
         $this->mailer->send($email);
         return new Response($this->handleCircularReference($user), Response::HTTP_CREATED);
 
