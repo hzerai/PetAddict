@@ -22,10 +22,7 @@ class Lost
     private $id;
 
     private $user;
-    /**
-     * @ORM\Column(type="text",  nullable=false)
-     */
-    private $body;
+    
      /**
      * @ORM\Column(type="string", length=255)
      */
@@ -248,16 +245,6 @@ class Lost
 
         return $this;
     }
-    public function getBody(): ?string
-    {
-        return $this->body;
-    }
-
-    public function setBody(?string $body): self
-    {
-        $this->body = $body;
-
-        return $this;
-    }
+   
 
 }
