@@ -58,7 +58,8 @@ class Comment
      * @ORM\OneToMany(targetEntity=Comment::class, mappedBy="comment",cascade={"persist", "remove"})
      */
     private $comments;
-  /**
+  
+    /**
      * @ORM\Column(type="string", length=255, nullable=true)
      */
     private $userFullName;
@@ -67,6 +68,17 @@ class Comment
      * @ORM\Column(type="integer")
      */
     private $userId;
+  
+    /**
+     * @ORM\ManyToOne(targetEntity=Lost::class, inversedBy="comments")
+     */
+    private $lost;
+
+    /**
+     * @ORM\ManyToOne(targetEntity=Found::class, inversedBy="comments")
+     */
+    private $found;
+
 
     public function __construct()
     {
@@ -222,7 +234,27 @@ class Comment
     public function setUserId(int $userId): self
     {
         $this->userId = $userId;
+    }
+  
+    public function getLost(): ?Lost
+    {
+        return $this->lost;
+    }
 
+    public function setLost(?Lost $lost): self
+    {
+        $this->lost = $lost;
+        return $this;
+    }
+
+    public function getFound(): ?Found
+    {
+        return $this->found;
+    }
+
+    public function setFound(?Found $found): self
+    {
+        $this->found = $found;
         return $this;
     }
 

@@ -471,14 +471,6 @@ class Villes
 
         ];
 
-
-        /*  
- new Ville('', [
-                new Municipality(''),
-
- ]),
-*/
-
         self::$initialized = true;
     }
 

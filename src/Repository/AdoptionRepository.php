@@ -31,7 +31,17 @@ class AdoptionRepository extends ServiceEntityRepository
     public function findWithCriteria($criteria = null,  array $orderBy = null, $limit = null, $offset = null)
     {
         $query =  $this->createQueryBuilder('a');
-
+        if (isset($criteria['urgent'])) {
+            $query->andWhere('a.urgent = :urgent')
+                ->setParameter('urgent', $criteria['urgent']);
+        }
+        if (isset($criteria['status'])) {
+            $query->andWhere('a.status = :status')
+                ->setParameter('status', $criteria['status']);
+        } else {
+            $query->andWhere('a.status = :status')
+                ->setParameter('status', 'CREATED');
+        }
         if (count($criteria) > 0) {
             if (isset($criteria['espece']) || isset($criteria['age']) || isset($criteria['couleur']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
                 $query->innerJoin(
@@ -49,19 +59,8 @@ class AdoptionRepository extends ServiceEntityRepository
                         ->setParameter('couleur', $criteria['couleur']);
                 }
                 if (isset($criteria['age'])) {
-                    if ($criteria['age'] == 'Senior') {
-                        $query->andWhere('b.age >= :age')
-                            ->setParameter('age', 4);
-                    } else if ($criteria['age'] == 'Bébé') {
-                        $query->andWhere('b.age = :age')
-                            ->setParameter('age', 1);
-                    } else if ($criteria['age'] == 'Junior') {
-                        $query->andWhere('b.age = :age')
-                            ->setParameter('age', 2);
-                    } else if ($criteria['age'] == 'Adulte') {
-                        $query->andWhere('b.age = :age')
-                            ->setParameter('age', 3);
-                    }
+                    $query->andWhere('b.age = :age')
+                        ->setParameter('age', $criteria['age']);
                 }
                 if (isset($criteria['type'])) {
                     $query->andWhere('b.type = :type')
@@ -116,9 +115,9 @@ class AdoptionRepository extends ServiceEntityRepository
      */
     public function elasticSearch($key)
     {
-        $result = [];
         $query =  $this->createQueryBuilder('a');
-        $query->Where('a.title LIKE :title')
+      
+        $query->orWhere('a.title LIKE :title')
             ->setParameter('title', '%' . $key . '%');
         $query->orWhere('a.description LIKE :description')
             ->setParameter('description', '%' . $key . '%');
@@ -138,11 +137,12 @@ class AdoptionRepository extends ServiceEntityRepository
             ->setParameter('sexe', '%' . $key . '%');
         $query->orWhere('b.couleur LIKE :couleur')
             ->setParameter('couleur', '%' . $key . '%');
+        $query->andWhere('a.status = :status')
+            ->setParameter('status', 'CREATED');
         $query->select('a');
         $result1 =   $query->orderBy('a.id', 'DESC')
             ->getQuery()
             ->getResult();
-
 
         $query =  $this->createQueryBuilder('a');
         $query->innerJoin(
@@ -169,6 +169,8 @@ class AdoptionRepository extends ServiceEntityRepository
             ->setParameter('municipality', '%' . $key . '%');
         $query->orWhere('d.details LIKE :details')
             ->setParameter('details', '%' . $key . '%');
+        $query->andWhere('a.status = :status')
+            ->setParameter('status', 'CREATED');
         $query->select('a');
         $result2 =   $query->orderBy('a.id', 'DESC')
             ->getQuery()
@@ -183,7 +185,17 @@ class AdoptionRepository extends ServiceEntityRepository
     public function countFiltered($criteria = null)
     {
         $query =  $this->createQueryBuilder('a');
-
+        if (isset($criteria['urgent'])) {
+            $query->andWhere('a.urgent = :urgent')
+                ->setParameter('urgent', $criteria['urgent']);
+        }
+        if (isset($criteria['status'])) {
+            $query->andWhere('a.status = :status')
+                ->setParameter('status', $criteria['status']);
+        } else {
+            $query->andWhere('a.status = :status')
+                ->setParameter('status', 'CREATED');
+        }
         if (count($criteria) > 0) {
             if (isset($criteria['espece']) || isset($criteria['age']) || isset($criteria['couleur']) || isset($criteria['type']) || isset($criteria['taille']) || isset($criteria['sexe'])) {
                 $query->innerJoin(
@@ -266,6 +278,8 @@ class AdoptionRepository extends ServiceEntityRepository
     public function findPaged($offset, $size)
     {
         return $this->createQueryBuilder('a')
+            ->where('a.status = :status')
+            ->setParameter('status', 'CREATED')
             ->orderBy('a.id', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($size)
@@ -279,6 +293,8 @@ class AdoptionRepository extends ServiceEntityRepository
         $count = $this->count([]);
         $offset = random_int(0, $count - 1);
         return $this->createQueryBuilder('a')
+            ->where('a.status = :status')
+            ->setParameter('status', 'CREATED')
             ->getQuery()
             ->setFirstResult($offset)
             ->setMaxResults(1)

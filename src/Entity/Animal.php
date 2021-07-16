@@ -34,7 +34,7 @@ class Animal
     private $taille;
 
     /**
-     * @ORM\Column(type="integer",  nullable=true)
+     * @ORM\Column(type="string", length=255 ,  nullable=true)
      */
     private $age;
 
@@ -114,12 +114,12 @@ class Animal
         return $this;
     }
 
-    public function getAge(): ?int
+    public function getAge(): ?string
     {
         return $this->age;
     }
 
-    public function setAge(?int $age): self
+    public function setAge(?string $age): self
     {
         $this->age = $age;
 

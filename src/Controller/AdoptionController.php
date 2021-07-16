@@ -5,14 +5,17 @@ namespace App\Controller;
 use App\Entity\Adoption;
 use App\Entity\AdoptionRequest;
 use App\Entity\Animal;
+use App\Entity\Temoignage;
 use App\Repository\AddressRepository;
 use App\Repository\AdoptionRepository;
 use App\Repository\AdoptionRequestRepository;
 use App\Repository\AnimalRepository;
+use App\Repository\TemoignageRepository;
 use App\Repository\UserRepository;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
+use phpDocumentor\Reflection\Types\Boolean;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -36,6 +39,7 @@ class AdoptionController extends AbstractFOSRestController
     private $adoptionRequestRepository;
     private $userRepo;
     private $addressRepository;
+    private $temoignageRepo;
 
 
     public function __construct(
@@ -45,7 +49,8 @@ class AdoptionController extends AbstractFOSRestController
         SerializerInterface $serializer,
         AnimalRepository $animalRepo,
         UserRepository $userRepo,
-        AddressRepository $addressRepository
+        AddressRepository $addressRepository,
+        TemoignageRepository $temoignageRepo
     ) {
 
         $this->adoptionRepository = $repository;
@@ -55,6 +60,7 @@ class AdoptionController extends AbstractFOSRestController
         $this->userRepo = $userRepo;
         $this->addressRepository = $addressRepository;
         $this->adoptionRequestRepository = $adoptionRequestRepository;
+        $this->temoignageRepo = $temoignageRepo;
     }
 
     function clean($string)
@@ -81,14 +87,17 @@ class AdoptionController extends AbstractFOSRestController
         $sexe = $requst->query->get('sexe');
         $user_id = $requst->query->get('user_id');
         $key = $requst->query->get('key');
+        $urgent = $requst->query->get('urgent');
+        $status = $requst->query->get('status');
 
         if (
             isset($espece) && strlen($espece) > 0 || isset($type) && strlen($type) > 0 ||
+            isset($urgent) && strlen($urgent) > 0 || isset($status) && strlen($status) > 0 ||
             isset($age) && strlen($age) > 0 || isset($couleur) && strlen($couleur) > 0 ||
             isset($taille) && strlen($taille) > 0 || isset($sexe) && strlen($sexe) > 0 ||
             isset($ville) && strlen($ville) > 0 || isset($municipality) && strlen($municipality) > 0 || isset($user_id) && strlen($user_id) > 0
         ) {
-            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id, $age, $couleur);
+            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id, $age, $couleur, $urgent, $status);
             $page = isset($page) && $page > 0 ? $page : 1;
             $offset = isset($size) ? ($page - 1) * $size : ($page - 1) * 8;
             $criteria['page'] = $page;
@@ -186,19 +195,12 @@ class AdoptionController extends AbstractFOSRestController
         $taille = $requst->query->get('taille');
         $sexe = $requst->query->get('sexe');
         $user_id = $requst->query->get('user_id');
+        $urgent = $requst->query->get('urgent');
+        $status = $requst->query->get('status');
 
-        if (
-            isset($espece) && strlen($espece) > 0 || isset($type) && strlen($type) > 0 ||
-            isset($age) && strlen($age) > 0 || isset($couleur) && strlen($couleur) > 0 ||
-            isset($taille) && strlen($taille) > 0 || isset($sexe) && strlen($sexe) > 0 ||
-            isset($ville) && strlen($ville) > 0 || isset($municipality) && strlen($municipality) > 0 || isset($user_id) && strlen($user_id) > 0
-        ) {
-            $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id, $age, $couleur);
-            $size = $this->adoptionRepository->countFiltered($criteria);
-            return $this->json($size, Response::HTTP_OK);
-        }
 
-        $size = $this->adoptionRepository->count([]);
+        $criteria = $this->createCriteria($espece, $type, $taille, $sexe, $ville, $municipality, $user_id, $age, $couleur, $urgent, $status);
+        $size = $this->adoptionRepository->countFiltered($criteria);
         return $this->json($size, Response::HTTP_OK);
     }
 
@@ -320,6 +322,9 @@ class AdoptionController extends AbstractFOSRestController
         if (isset($data['description'])) {
             $adoption->setDescription($data['description']);
         }
+        if (isset($data['urgent'])) {
+            $adoption->setUrgent($data['urgent']);
+        }
         return $adoption;
     }
 
@@ -351,7 +356,7 @@ class AdoptionController extends AbstractFOSRestController
         return $animal;
     }
 
-    private function createCriteria($espece = null, $type = null, $taille = null, $sexe = null, $ville = null, $municipality = null, $user_id = null, $age, $couleur): array
+    private function createCriteria($espece = null, $type = null, $taille = null, $sexe = null, $ville = null, $municipality = null, $user_id = null, $age, $couleur, $urgent = null, $status = null): array
     {
 
         $criteria = [];
@@ -360,6 +365,12 @@ class AdoptionController extends AbstractFOSRestController
         }
         if (isset($type) && strlen($type) > 0) {
             $criteria['type'] = $type;
+        }
+        if (isset($urgent) && strlen($urgent) > 0) {
+            $criteria['urgent'] = boolval($urgent);
+        }
+        if (isset($status) && strlen($status) > 0) {
+            $criteria['status'] = $status;
         }
         if (isset($age) && strlen($age) > 0) {
             $criteria['age'] = $age;
@@ -412,16 +423,50 @@ class AdoptionController extends AbstractFOSRestController
     }
 
     /**
+     * @Route("/api/adoptionRequest/{id}/temoignage", name="create_temoignage" , methods = "POST")
+     */
+    public function temoignage($id, Request $request): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        $user = $this->getUser();
+        $adoptionRequest = $this->adoptionRequestRepository->find($id);
+        $temoignage = new Temoignage();
+        $temoignage->setTitre($data['titre']);
+        $temoignage->setBody($data['body']);
+        $temoignage->setAdoption($adoptionRequest);
+        $temoignage->setCreatedBy($user->getEmail());
+        $this->entityManager->persist($temoignage);
+        $adoptionRequest->setHasTestamony(true);
+        $this->entityManager->persist($adoptionRequest);
+        $this->entityManager->flush();
+        return new Response($this->handleCircularReference($temoignage), Response::HTTP_CREATED);
+    }
+
+    /**
+     * @Route("/api/adoptionRequest/temoignages", name="find_temoignages" , methods = "GET")
+     */
+    public function getAllTemoignage(): Response
+    {
+        $temoignages = $this->temoignageRepo->findAll();
+        return new Response($this->handleCircularReference($temoignages), Response::HTTP_OK);
+    }
+
+
+
+    /**
      * @Route("/api/adoptionRequest/{id}/accept", name="accept_adoption_request" , methods = "POST")
      */
     public function acceptAdoptionRequest($id): Response
     {
-        $sql = 'update adoption_request set status = :status , updated_by = :usr , updated_at = :d where id = :id';
-        $params['id'] = $id;
-        $params['status'] = "ACCEPTED";
-        $params['usr'] = $this->getUser()->getEmail();
-        $params['d'] = date_format(new DateTime(), 'Y-m-d H:i:s');
-        $this->entityManager->getConnection()->executeQuery($sql, $params);
+        $ar = $this->adoptionRequestRepository->find($id);
+        $ar->setStatus('ACCEPTED');
+        $ar->setUpdatedBy($this->getUser()->getEmail());
+        $adoption = $this->adoptionRepository->find($ar->getAdoptionId());
+        $adoption->setStatus('ADOPTED');
+        $adoption->setUpdatedBy($this->getUser()->getEmail());
+        $this->entityManager->persist($ar);
+        $this->entityManager->persist($adoption);
+        $this->entityManager->flush();
         return new Response(Response::HTTP_ACCEPTED);
     }
 
@@ -486,7 +531,7 @@ class AdoptionController extends AbstractFOSRestController
     }
 
     /**
-     * @Route("/api/adoptionRequest/user/{id}", name="get_adoption_adoption_requests" , methods = "GET")
+     * @Route("/api/adoptionRequest/adoption/{id}", name="get_adoption_adoption_requests" , methods = "GET")
      */
     public function getAdoptionAdoptionRequest($id): Response
     {
