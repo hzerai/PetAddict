@@ -10,15 +10,18 @@ use FOS\RestBundle\Controller\AbstractFOSRestController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 class VetoController  extends AbstractFOSRestController
 {
     private $vetoRepository;
     private $entityManager;
+    private $serializer;
     
-    public function __construct(VetoRepository $repository, EntityManagerInterface $em)
+    public function __construct(VetoRepository $repository, EntityManagerInterface $em, SerializerInterface $serializer)
     {
         $this->vetoRepository = $repository;
         $this->entityManager = $em;
+        $this->serializer = $serializer;
     }
 
     /**
@@ -143,6 +146,24 @@ class VetoController  extends AbstractFOSRestController
             $criteria['creationAt'] = $creationAt;
         }
         return $criteria;
+    }
+    /**
+     * @Route("/api/vetos/elasticsearch", name="elastic_search_veto" , methods = "GET")
+     */
+    public function elasticSearch(Request $requst): Response
+    {
+        $key = $requst->query->get('keyword');
+        $veto = $this->vetoRepository->elasticSearch($key);
+        return new Response($this->handleCircularReference($veto), Response::HTTP_OK);
+    }
+    function handleCircularReference($objectToSerialize)
+    {
+        $jsonObject = $this->serializer->serialize($objectToSerialize, 'json', [
+            'circular_reference_handler' => function ($object) {
+                return $object->getId();
+            }
+        ]);
+        return $jsonObject;
     }
 
 

@@ -10,17 +10,21 @@ use FOS\RestBundle\Controller\AbstractFOSRestController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 
 
 class AssociationController  extends AbstractFOSRestController
 {
     private $associationRepository;
     private $entityManager;
+    private $serializer;
     
-    public function __construct(AssociationRepository $repository, EntityManagerInterface $em)
+    public function __construct(AssociationRepository $repository, EntityManagerInterface $em, SerializerInterface $serializer)
     {
         $this->associationRepository = $repository;
         $this->entityManager = $em;
+        $this->serializer = $serializer;
+        
     }
 
     /**
@@ -147,6 +151,24 @@ class AssociationController  extends AbstractFOSRestController
             $criteria['creationAt'] = $creationAt;
         }
         return $criteria;
+    }
+    /**
+     * @Route("/api/associations/elasticsearch", name="elastic_search_association" , methods = "GET")
+     */
+    public function elasticSearch(Request $requst): Response
+    {
+        $key = $requst->query->get('keyword');
+        $association = $this->associationRepository->elasticSearch($key);
+        return new Response($this->handleCircularReference($association), Response::HTTP_OK);
+    }
+    function handleCircularReference($objectToSerialize)
+    {
+        $jsonObject = $this->serializer->serialize($objectToSerialize, 'json', [
+            'circular_reference_handler' => function ($object) {
+                return $object->getId();
+            }
+        ]);
+        return $jsonObject;
     }
 
 
