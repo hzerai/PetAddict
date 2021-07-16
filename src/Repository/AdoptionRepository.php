@@ -116,7 +116,7 @@ class AdoptionRepository extends ServiceEntityRepository
     public function elasticSearch($key)
     {
         $query =  $this->createQueryBuilder('a');
-      
+
         $query->orWhere('a.title LIKE :title')
             ->setParameter('title', '%' . $key . '%');
         $query->orWhere('a.description LIKE :description')
@@ -137,6 +137,8 @@ class AdoptionRepository extends ServiceEntityRepository
             ->setParameter('sexe', '%' . $key . '%');
         $query->orWhere('b.couleur LIKE :couleur')
             ->setParameter('couleur', '%' . $key . '%');
+        $query->orWhere('b.age LIKE :age')
+            ->setParameter('age', '%' . $key . '%');
         $query->andWhere('a.status = :status')
             ->setParameter('status', 'CREATED');
         $query->select('a');
@@ -213,19 +215,8 @@ class AdoptionRepository extends ServiceEntityRepository
                         ->setParameter('couleur', $criteria['couleur']);
                 }
                 if (isset($criteria['age'])) {
-                    if ($criteria['age'] == 'Senior') {
-                        $query->andWhere('b.age >= :age')
-                            ->setParameter('age', 4);
-                    } else if ($criteria['age'] == 'Bébé') {
-                        $query->andWhere('b.age = :age')
-                            ->setParameter('age', 1);
-                    } else if ($criteria['age'] == 'Junior') {
-                        $query->andWhere('b.age = :age')
-                            ->setParameter('age', 2);
-                    } else if ($criteria['age'] == 'Adulte') {
-                        $query->andWhere('b.age = :age')
-                            ->setParameter('age', 3);
-                    }
+                    $query->andWhere('b.age = :age')
+                        ->setParameter('age', $criteria['age']);
                 }
                 if (isset($criteria['type'])) {
                     $query->andWhere('b.type = :type')
