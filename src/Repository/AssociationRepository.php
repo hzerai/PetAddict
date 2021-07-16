@@ -59,4 +59,19 @@ class AssociationRepository extends ServiceEntityRepository
         ;
     }
     */
+     /**
+     * @return Association[] Returns an array of Adoption objects
+     */
+    public function elasticSearch($key)
+    {
+        
+        $query =  $this->createQueryBuilder('a');
+        $query->Where('a.title LIKE :title')
+            ->setParameter('title', '%' . $key . '%');
+        $query->orWhere('a.description LIKE :description')
+            ->setParameter('description', '%' . $key . '%');
+           return $query->getQuery()
+            ->getResult();
+
+    }
 }
