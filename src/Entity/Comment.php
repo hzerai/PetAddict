@@ -234,6 +234,8 @@ class Comment
     public function setUserId(int $userId): self
     {
         $this->userId = $userId;
+
+        return $this;
     }
   
     public function getLost(): ?Lost

@@ -168,6 +168,7 @@ class PostController extends AbstractFOSRestController
         $commentreply=new Comment(); 
         $commentreply->setBody($body);
         $user=$this->getUser();
+        $commentreply->setUserId($user->getId());
         $commentreply->setCreatedBy($user->getEmail());
         $commentreply->setUserFullName($user->getFirstName()." ".$user->getLastName());
 

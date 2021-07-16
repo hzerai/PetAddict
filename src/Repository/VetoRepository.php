@@ -59,20 +59,20 @@ class VetoRepository extends ServiceEntityRepository
         ;
     }
     */
-/**
+    /**
      * @return Veto[] Returns an array of Adoption objects
      */
     public function elasticSearch($key)
     {
-        
+
         $query =  $this->createQueryBuilder('a');
         $query->Where('a.docteur LIKE :docteur')
             ->setParameter('docteur', '%' . $key . '%');
         $query->orWhere('a.description LIKE :description')
             ->setParameter('description', '%' . $key . '%');
-           return $query->getQuery()
+        $query->orWhere('a.adresse LIKE :adresse')
+            ->setParameter('adresse', '%' . $key . '%');
+        return $query->getQuery()
             ->getResult();
-
     }
-
 }
