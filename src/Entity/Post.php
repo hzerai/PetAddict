@@ -58,6 +58,11 @@ class Post
      */
     private $comments;
 
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $userId;
+
     public function __construct()
     {
         $this->comments = new ArrayCollection();
@@ -188,6 +193,18 @@ class Post
                 $comment->setPost(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getUserId(): ?int
+    {
+        return $this->userId;
+    }
+
+    public function setUserId(int $userId): self
+    {
+        $this->userId = $userId;
 
         return $this;
     }
