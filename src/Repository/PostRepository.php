@@ -41,7 +41,7 @@ class PostRepository extends ServiceEntityRepository
     public function findPaged($offset, $size)
     {
         return $this->createQueryBuilder('a')
-            ->orderBy('a.createdAt', 'DESC')
+            ->orderBy('a.id', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($size)
             ->getQuery()

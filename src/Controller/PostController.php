@@ -156,7 +156,7 @@ class PostController extends AbstractFOSRestController
         }
         $this->entityManager->persist($post);
         $this->entityManager->flush();
-        return new Response($this->handleCircularReference($post), Response::HTTP_OK);
+        return new Response($this->handleCircularReference($comment), Response::HTTP_OK);
     }
       /**
      * @Route("/api/post/{id}/addcomment/{commentid}/reply", name="reply" , methods = "POST")
@@ -176,7 +176,6 @@ class PostController extends AbstractFOSRestController
         $comment->addComment($commentreply);
         $this->entityManager->persist($comment);
         $this->entityManager->flush();
-        $post= $this->postRepository->find($id);
-        return new Response($this->handleCircularReference($post), Response::HTTP_OK);
+        return new Response($this->handleCircularReference($commentreply), Response::HTTP_OK);
     }
 }

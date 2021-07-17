@@ -58,6 +58,7 @@ class LostRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+    
     public function count($status){
         $query = $this->createQueryBuilder('a');
         if ($status != null) {
